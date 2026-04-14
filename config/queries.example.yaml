@@ -1,0 +1,98 @@
+# queries.example.yaml
+#
+# Copy this file to queries.yaml and edit it with your target searches.
+# The fetcher iterates through every entry in `queries` and makes one
+# SerpAPI call per entry (plus additional calls for subsequent pages).
+#
+# Each entry maps directly to Google Jobs API parameters:
+#   q        (required) — free-text search query sent to Google Jobs
+#   location (optional) — city/state/country to simulate search origin;
+#                         specify at the city level for best results
+#   gl       (optional) — two-letter country code (default: us)
+#   hl       (optional) — two-letter language code (default: en)
+#   lrad     (optional) — search radius in km (soft limit; Google may exceed it)
+#   uds      (optional) — opaque filter token from a prior API response's
+#                         `filters[].uds` field; use to apply date/type filters
+#
+# Budget note: SerpAPI free tier = 100 searches/month; paid plans start at
+# 1,000/month. Each entry below = 1 search credit per page fetched.
+# Keep total queries * pages_per_query under your monthly budget.
+# Architecture target: ≤30 queries/day in steady-state daily mode.
+#
+# Remote searches: append "remote" to `q` rather than relying on the
+# deprecated `ltype=1` parameter, which Google has discontinued.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Defaults applied to every query unless explicitly overridden at the entry level.
+defaults:
+  gl: "us"
+  hl: "en"
+
+queries:
+
+  # ── Example 1: Role + metro area ─────────────────────────────────────────
+  # Standard search scoped to a specific city. Google Jobs uses `location`
+  # to simulate a local user's search, surfacing nearby and commutable roles.
+  - name: "Data Scientist - Seattle"
+    q: "Data Scientist"
+    location: "Seattle, Washington"
+
+  # ── Example 2: Remote-only via query keyword ──────────────────────────────
+  # Appending "remote" to `q` is the recommended way to target WFH roles
+  # now that Google has deprecated the `ltype=1` filter parameter.
+  - name: "Machine Learning Engineer - Remote"
+    q: "Machine Learning Engineer remote"
+    location: "United States"
+
+  # ── Example 3: Broad national search with a search radius ─────────────────
+  # `lrad` loosens geographic filtering to a radius (km) around `location`.
+  # Useful for roles where you want regional breadth without going fully remote.
+  # Note: Google treats lrad as a soft hint, not a hard boundary.
+  - name: "Data Engineer - Austin area (150 km)"
+    q: "Data Engineer"
+    location: "Austin, Texas"
+    lrad: 150
+
+  # ── Example 4: Seniority qualifier in query string ────────────────────────
+  # Google Jobs respects seniority keywords in `q`. Add "senior", "staff",
+  # "principal", "junior", "lead", etc. to narrow results by level.
+  - name: "Senior Data Scientist - New York"
+    q: "Senior Data Scientist"
+    location: "New York, New York"
+
+  # ── Example 5: Alternate title targeting ──────────────────────────────────
+  # Many companies use non-standard titles. Run separate queries for synonyms
+  # so you don't miss listings posted under different names.
+  - name: "Applied Scientist - Remote"
+    q: "Applied Scientist remote"
+    location: "United States"
+
+  # ── Example 6: uds filter (date posted) ───────────────────────────────────
+  # `uds` tokens are extracted from the `filters[].uds` field of a prior API
+  # response. They encode filter state (e.g., "posted in the last 3 days")
+  # opaquely. Tokens are query-specific and may expire — re-fetch as needed.
+  # Use this in daily mode to avoid re-ingesting old listings.
+  #
+  # To obtain a valid token:
+  #   1. Run a search without `uds` and inspect the response `filters` array.
+  #   2. Find the "Date posted" filter option you want.
+  #   3. Copy its `uds` value here.
+  #
+  # The placeholder below will NOT work — replace it with a real token.
+  - name: "ML Engineer - San Francisco (past week)"
+    q: "Machine Learning Engineer"
+    location: "San Francisco, California"
+    uds: "REPLACE_WITH_REAL_UDS_TOKEN"  # e.g. ADvngMjvPWL3...
+
+  # ── Example 7: Domain-specific qualifier ──────────────────────────────────
+  # Adding a domain keyword (e.g., "NLP", "computer vision", "time series")
+  # targets specialized sub-fields within a broad title. Useful if your resume
+  # is strongest in a particular niche.
+  - name: "NLP Engineer - Remote"
+    q: "NLP Engineer natural language processing remote"
+    location: "United States"
+
+  # ── Example 8: Analytics / BI roles ───────────────────────────────────────
+  - name: "Analytics Engineer - Remote"
+    q: "Analytics Engineer remote"
+    location: "United States"
