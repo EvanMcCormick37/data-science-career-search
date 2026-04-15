@@ -21,7 +21,6 @@ from db.connection import connection
 
 logger = logging.getLogger(__name__)
 
-
 class Normalizer:
     def __init__(self) -> None:
         # alias → id

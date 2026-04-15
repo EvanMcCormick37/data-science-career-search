@@ -17,9 +17,9 @@ A Python-based pipeline that ingests job listings from SerpAPI (Google Jobs), ex
 │                     (Python, scheduled daily)                       │
 │                                                                     │
 │  ┌──────────┐    ┌──────────┐    ┌───────────┐    ┌─────────────┐   │
-│  │ SerpAPI  │───▶│  Dedup   │───▶│ LLM       │───▶│ Embed +    │  │
-│  │ Fetcher  │    │ (Fuzzy)  │    │ Extractor │    │ Store (PG)  │  │
-│  └──────────┘    └──────────┘    └───────────┘    └─────────────┘  │
+│  │ SerpAPI  │───▶│  Dedup   │──▶│ LLM       │──▶│ Embed +     │   │
+│  │ Fetcher  │    │ (Fuzzy)  │    │ Extractor │    │ Store (PG)  │   │
+│  └──────────┘    └──────────┘    └───────────┘    └─────────────┘   │
 │       │                                │                            │
 │       ▼                                ▼                            │
 │  Backfill mode: paginate         skills.md + frameworks.md          │

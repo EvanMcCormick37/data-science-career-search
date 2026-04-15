@@ -1,0 +1,191 @@
+alias,canonical_name
+postgres,PostgreSQL
+postgresql,PostgreSQL
+psql,PostgreSQL
+pg,PostgreSQL
+mysql,MySQL
+sqlite,SQLite
+mariadb,MariaDB
+oracle,Oracle Database
+oracle db,Oracle Database
+mongodb,MongoDB
+mongo,MongoDB
+redis,Redis
+dynamodb,DynamoDB
+memcached,Memcached
+snowflake,Snowflake
+bigquery,BigQuery
+bq,BigQuery
+redshift,Redshift
+amazon redshift,Redshift
+clickhouse,ClickHouse
+apache spark,Apache Spark
+spark,Apache Spark
+pyspark,Apache Spark
+hadoop,Hadoop
+databricks,Databricks
+apache flink,Apache Flink
+flink,Apache Flink
+apache airflow,Apache Airflow
+airflow,Apache Airflow
+apache kafka,Apache Kafka
+kafka,Apache Kafka
+neo4j,Neo4j
+influxdb,InfluxDB
+elasticsearch,Elasticsearch
+elastic,Elasticsearch
+rocksdb,RocksDB
+tableau,Tableau
+power bi,Power BI
+powerbi,Power BI
+looker,Looker
+tensorflow,TensorFlow
+tf,TensorFlow
+pytorch,PyTorch
+torch,PyTorch
+keras,Keras
+scikit-learn,Scikit-learn
+sklearn,Scikit-learn
+scikit learn,Scikit-learn
+pandas,Pandas
+numpy,NumPy
+np,NumPy
+matplotlib,Matplotlib
+seaborn,Seaborn
+langchain,LangChain
+lang chain,LangChain
+hugging face,Hugging Face
+huggingface,Hugging Face
+hf,Hugging Face
+nltk,NLTK
+spacy,SpaCy
+opencv,OpenCV
+open cv,OpenCV
+python3,Python
+py,Python
+javascript,JavaScript
+js,JavaScript
+typescript,TypeScript
+ts,TypeScript
+shell scripting,Shell
+bash,Shell
+bash scripting,Shell
+r language,R
+java,Java
+c#,C#
+dotnet,C#
+.net,C#
+golang,Go
+cpp,C++
+react,React
+react.js,React
+reactjs,React
+angular,Angular
+vue,Vue.js
+vuejs,Vue.js
+svelte,Svelte
+next,Next.js
+next.js,Next.js
+nuxt,Nuxt.js
+nuxt.js,Nuxt.js
+redux,Redux
+tailwind,Tailwind CSS
+tailwindcss,Tailwind CSS
+material ui,Material UI
+mui,Material UI
+chakra,Chakra UI
+d3,D3.js
+d3.js,D3.js
+react native,React Native
+rn,React Native
+node,Node.js
+node.js,Node.js
+nodejs,Node.js
+express,Express.js
+express.js,Express.js
+nestjs,NestJS
+nest.js,NestJS
+django,Django
+flask,Flask
+fastapi,FastAPI
+fast api,FastAPI
+spring,Spring Boot
+spring boot,Spring Boot
+asp.net,ASP.NET Core
+aspnet,ASP.NET Core
+rails,Ruby on Rails
+ruby on rails,Ruby on Rails
+ror,Ruby on Rails
+graphql,GraphQL
+grpc,gRPC
+postman,Postman
+swagger,Swagger
+openapi,Swagger
+rabbitmq,RabbitMQ
+rabbit mq,RabbitMQ
+celery,Celery
+nginx,Nginx
+apache,Apache HTTP Server
+aws,AWS
+amazon web services,AWS
+gcp,Google Cloud Platform
+google cloud,Google Cloud Platform
+azure,Microsoft Azure
+microsoft azure,Microsoft Azure
+heroku,Heroku
+digitalocean,DigitalOcean
+vercel,Vercel
+netlify,Netlify
+cloudflare,Cloudflare
+firebase,Firebase
+supabase,Supabase
+docker,Docker
+k8s,Kubernetes
+kubernetes,Kubernetes
+kube,Kubernetes
+helm,Helm
+istio,Istio
+terraform,Terraform
+pulumi,Pulumi
+cloudformation,CloudFormation
+ansible,Ansible
+jenkins,Jenkins
+github actions,GitHub Actions
+gh actions,GitHub Actions
+gitlab ci,GitLab CI
+gitlab-ci,GitLab CI
+circleci,CircleCI
+argocd,ArgoCD
+argo cd,ArgoCD
+selenium,Selenium
+cypress,Cypress
+playwright,Playwright
+jest,Jest
+pytest,Pytest
+py.test,Pytest
+oauth,OAuth
+oauth2,OAuth
+jwt,JWT
+json web token,JWT
+auth0,Auth0
+okta,Okta
+vault,Vault
+sonarqube,SonarQube
+prometheus,Prometheus
+grafana,Grafana
+datadog,Datadog
+new relic,New Relic
+newrelic,New Relic
+opentelemetry,OpenTelemetry
+otel,OpenTelemetry
+splunk,Splunk
+sentry,Sentry
+linux,Linux
+ubuntu,Linux
+debian,Linux
+git,Git
+jira,Jira
+confluence,Confluence
+salesforce,Salesforce
+sap,SAP
+servicenow,ServiceNow

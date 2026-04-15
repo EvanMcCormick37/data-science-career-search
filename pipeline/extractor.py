@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 _EMPLOYMENT_TYPES = {"full-time", "part-time", "contract", "internship"}
 _ATTENDANCES      = {"remote", "hybrid", "onsite"}
 _SENIORITIES      = {"junior", "mid", "senior", "lead", "staff", "principal"}
-_SALARY_PERIODS   = {"yearly", "hourly", "monthly"}
+_SALARY_PERIODS   = {"yearly", "hourly", "monthly", "contract"}
 
 _EXTRACTION_SCHEMA = """
 {
@@ -49,7 +49,7 @@ _EXTRACTION_SCHEMA = """
   "salary_min":           integer | null,
   "salary_max":           integer | null,
   "salary_currency":      string | null,
-  "salary_period":        "yearly" | "hourly" | "monthly" | null,
+  "salary_period":        "yearly" | "hourly" | "monthly" | "contract" | null,
   "skills":               [string, ...],
   "frameworks":           [string, ...]
 }

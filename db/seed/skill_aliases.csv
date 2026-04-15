@@ -1,0 +1,198 @@
+alias,canonical_name
+etl,ETL/ELT Processes
+elt,ETL/ELT Processes
+etl/elt,ETL/ELT Processes
+data pipeline,ETL/ELT Processes
+data pipelines,ETL/ELT Processes
+streaming,Stream Processing
+stream processing,Stream Processing
+batch,Batch Processing
+batch processing,Batch Processing
+data warehouse,Data Warehousing
+data warehousing,Data Warehousing
+data lake,Data Lake Management
+data modeling,Data Modeling
+data modelling,Data Modeling
+query optimization,Query Optimization
+query optimisation,Query Optimization
+data cleaning,Data Cleaning
+data wrangling,Data Wrangling
+feature engineering,Feature Extraction
+feature extraction,Feature Extraction
+business intelligence,Business Intelligence
+bi,Business Intelligence
+data visualization,Data Visualization
+data visualisation,Data Visualization
+dataviz,Data Visualization
+statistical analysis,Statistical/Numerical Analysis
+statistics,Statistical/Numerical Analysis
+statistical modeling,Statistical/Numerical Analysis
+cohort analysis,Cohort/Funnel Analysis
+funnel analysis,Cohort/Funnel Analysis
+a/b testing,Cohort/Funnel Analysis
+ab testing,Cohort/Funnel Analysis
+data lineage,Data Lineage & Cataloging
+data catalog,Data Lineage & Cataloging
+metadata management,Metadata Harvesting/Management
+anonymization,Anonymization/Pseudo-anonymization
+pseudonymization,Anonymization/Pseudo-anonymization
+machine learning,Predictive Modeling
+ml,Predictive Modeling
+predictive modeling,Predictive Modeling
+predictive modelling,Predictive Modeling
+deep learning,Deep Learning
+dl,Deep Learning
+neural networks,Neural Networks
+neural network,Neural Networks
+ann,Neural Networks
+reinforcement learning,Reinforcement Learning
+rl,Reinforcement Learning
+hyperparameter tuning,Hyperparameter Tuning
+hp tuning,Hyperparameter Tuning
+dimensionality reduction,Dimensionality Reduction
+pca,Dimensionality Reduction
+transfer learning,Transfer Learning
+bayesian inference,Bayesian Inference
+bayesian,Bayesian Inference
+llm,Large Language Models (LLMs)
+llms,Large Language Models (LLMs)
+large language models,Large Language Models (LLMs)
+language models,Large Language Models (LLMs)
+foundation models,Large Language Models (LLMs)
+generative ai,Large Language Models (LLMs)
+gen ai,Large Language Models (LLMs)
+prompt engineering,Prompt Engineering
+fine-tuning,Fine-Tuning Models
+fine tuning,Fine-Tuning Models
+finetuning,Fine-Tuning Models
+rlhf,Fine-Tuning Models
+agentic ai,Agentic Workflows
+ai agents,Agentic Workflows
+agent workflows,Agentic Workflows
+nlp,Natural Language Understanding/Generation
+natural language processing,Natural Language Understanding/Generation
+nlu,Natural Language Understanding/Generation
+nlg,Natural Language Understanding/Generation
+text generation,Natural Language Understanding/Generation
+speech recognition,Speech-to-Text/Text-to-Speech
+tts,Speech-to-Text/Text-to-Speech
+stt,Speech-to-Text/Text-to-Speech
+sentiment analysis,Sentiment Analysis
+ner,Entity Recognition
+named entity recognition,Entity Recognition
+entity recognition,Entity Recognition
+information extraction,Entity Recognition
+computer vision,Computer Vision
+cv,Computer Vision
+object detection,Object Detection/Tracking
+image recognition,Image Processing
+image classification,Image Processing
+signal processing,Audio/Signal Processing
+audio processing,Audio/Signal Processing
+recommendation system,Recommendation Engines
+recommender system,Recommendation Engines
+recommender,Recommendation Engines
+anomaly detection,Anomaly Detection
+vector databases,Vector Databases
+vector db,Vector Databases
+vectordb,Vector Databases
+vector search,Vector/Similarity Search
+similarity search,Vector/Similarity Search
+semantic search,Vector/Similarity Search
+embeddings,Embedding Generation
+text embeddings,Embedding Generation
+word embeddings,Embedding Generation
+model deployment,Model Deployment
+mlops,Model Deployment
+model serving,Model Deployment
+model monitoring,Model Monitoring
+model compression,Model Compression
+quantization,Model Compression
+explainable ai,Explainable AI
+xai,Explainable AI
+responsible ai,Ethics in AI
+ai ethics,Ethics in AI
+federated learning,Privacy-Preserving AI
+rest api,REST
+restful,REST
+restful api,REST
+api gateway,API Gateway Management
+microservice,Microservices
+microservice architecture,Microservices
+event-driven,Event-Driven Architecture
+event driven,Event-Driven Architecture
+eda,Event-Driven Architecture
+serverless,Serverless Architecture
+oop,Object-Oriented Programming (OOP)
+object-oriented,Object-Oriented Programming (OOP)
+object oriented programming,Object-Oriented Programming (OOP)
+functional programming,Functional Programming
+async programming,Asynchronous Programming
+asynchronous programming,Asynchronous Programming
+concurrency,Concurrency Control
+distributed systems,Distributed Systems
+system design,System Design
+domain-driven design,Domain-Driven Design
+high availability,High Availability
+ha,High Availability
+fault tolerance,Fault Tolerance
+scalability,Scalability
+algorithms,Algorithms
+data structures,Algorithms
+tdd,Test-Driven Development (TDD)
+test-driven development,Test-Driven Development (TDD)
+bdd,Behavior-Driven Development (BDD)
+version control,Version Control (Git Operations)
+code review,Code Review
+iac,Infrastructure as Code (IaC)
+infrastructure as code,Infrastructure as Code (IaC)
+containerization,Containerization
+ci,Continuous Integration (CI)
+continuous integration,Continuous Integration (CI)
+cd,Continuous Deployment (CD)
+continuous deployment,Continuous Deployment (CD)
+continuous delivery,Continuous Deployment (CD)
+distributed tracing,Distributed Tracing
+tracing,Distributed Tracing
+log aggregation,Log Aggregation/Analysis
+logging,Log Aggregation/Analysis
+metrics,Metric Collection
+slo,Service Level Management (SLIs/SLOs/SLAs)
+sli,Service Level Management (SLIs/SLOs/SLAs)
+sla,Service Level Management (SLIs/SLOs/SLAs)
+load balancing,Load Balancing
+rate limiting,Rate Limiting
+autoscaling,Autoscaling Configuration
+penetration testing,Penetration Testing
+pentest,Penetration Testing
+vulnerability scanning,Vulnerability Scanning/Assessment
+threat modeling,Threat Modeling
+iam,Identity Access Management (IAM)
+identity access management,Identity Access Management (IAM)
+sso,Single Sign-On (SSO)
+mfa,Multi-Factor Authentication
+2fa,Multi-Factor Authentication
+rbac,Role/Attribute-Based Access
+zero trust,Zero Trust Architecture
+secrets management,Secrets Management
+encryption,Encryption/PKI
+unit testing,Unit Testing
+unit tests,Unit Testing
+integration testing,Integration Testing
+e2e testing,End-to-End Testing
+e2e,End-to-End Testing
+regression testing,Regression Testing
+load testing,Load Testing
+stress testing,Stress Testing
+scrum,Scrum Mastery
+kanban,Kanban Management
+mvp,Minimum Viable Product (MVP)
+feature flags,Feature Flags
+blue-green deployment,Blue-Green Deployment
+stakeholder management,Stakeholder Management
+finops,FinOps
+cloud cost management,Cloud Spend Management
+technical writing,Technical Writing/Documentation
+documentation,Technical Writing/Documentation
+mentorship,Mentorship & Open Source Contribution
+mentoring,Mentorship & Open Source Contribution

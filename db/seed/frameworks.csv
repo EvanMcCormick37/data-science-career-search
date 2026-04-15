@@ -1,0 +1,219 @@
+domain,subdomain,service,framework
+Core Programming & Markup Languages,,Systems & General Purpose,C++
+Core Programming & Markup Languages,,Systems & General Purpose,C#
+Core Programming & Markup Languages,,Systems & General Purpose,Java
+Core Programming & Markup Languages,,Systems & General Purpose,Go
+Core Programming & Markup Languages,,Systems & General Purpose,Rust
+Core Programming & Markup Languages,,Systems & General Purpose,Python
+Core Programming & Markup Languages,,Systems & General Purpose,Ruby
+Core Programming & Markup Languages,,Systems & General Purpose,PHP
+Core Programming & Markup Languages,,Web & Scripting,JavaScript
+Core Programming & Markup Languages,,Web & Scripting,TypeScript
+Core Programming & Markup Languages,,Web & Scripting,HTML
+Core Programming & Markup Languages,,Web & Scripting,CSS
+Core Programming & Markup Languages,,Web & Scripting,Shell
+Core Programming & Markup Languages,,Web & Scripting,PowerShell
+Core Programming & Markup Languages,,Specialized & Mobile,SQL
+Core Programming & Markup Languages,,Specialized & Mobile,R
+Core Programming & Markup Languages,,Specialized & Mobile,Dart
+Core Programming & Markup Languages,,Specialized & Mobile,Scala
+Core Programming & Markup Languages,,Specialized & Mobile,Kotlin
+Core Programming & Markup Languages,,Specialized & Mobile,Swift
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,React
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,Angular
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,Vue.js
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,Svelte
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,Ember.js
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,SolidJS
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,jQuery
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,Meta-Frameworks (SSR/SSG),Next.js
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,Meta-Frameworks (SSR/SSG),Nuxt.js
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,Meta-Frameworks (SSR/SSG),Gatsby
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,State Management & Data Fetching,Redux
+Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,State Management & Data Fetching,Apollo
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,CSS Frameworks & Systems,Tailwind CSS
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,CSS Frameworks & Systems,Bootstrap
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,CSS Frameworks & Systems,Material UI
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,CSS Frameworks & Systems,Radix UI
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,CSS Frameworks & Systems,Chakra UI
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,Graphics & Animation,Framer Motion
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,Graphics & Animation,Three.js
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,Graphics & Animation,D3.js
+Frontend & Client-Side Ecosystem,Styling Animation & Rendering,Component Development,Storybook
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Cross-Platform Mobile,Flutter
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Cross-Platform Mobile,React Native
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Cross-Platform Mobile,Xamarin
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Cross-Platform Mobile,Ionic
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Native Mobile UI,SwiftUI
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Native Mobile UI,Jetpack Compose
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Desktop Application,Tauri
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Desktop Application,Electron
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Web-to-Native Wrappers,Capacitor
+Frontend & Client-Side Ecosystem,Mobile & Desktop Environments,Web-to-Native Wrappers,Cordova
+Backend & API Engineering,Server-Side Frameworks,JavaScript/TypeScript,Node.js
+Backend & API Engineering,Server-Side Frameworks,JavaScript/TypeScript,Express.js
+Backend & API Engineering,Server-Side Frameworks,JavaScript/TypeScript,NestJS
+Backend & API Engineering,Server-Side Frameworks,Python,Django
+Backend & API Engineering,Server-Side Frameworks,Python,Flask
+Backend & API Engineering,Server-Side Frameworks,Python,FastAPI
+Backend & API Engineering,Server-Side Frameworks,Java/C#,Spring Boot
+Backend & API Engineering,Server-Side Frameworks,Java/C#,ASP.NET Core
+Backend & API Engineering,Server-Side Frameworks,PHP/Ruby/Go/Elixir,Laravel
+Backend & API Engineering,Server-Side Frameworks,PHP/Ruby/Go/Elixir,Symfony
+Backend & API Engineering,Server-Side Frameworks,PHP/Ruby/Go/Elixir,Ruby on Rails
+Backend & API Engineering,Server-Side Frameworks,PHP/Ruby/Go/Elixir,Gin
+Backend & API Engineering,Server-Side Frameworks,PHP/Ruby/Go/Elixir,Phoenix
+Backend & API Engineering,API & Communication Protocols,API Technologies,GraphQL
+Backend & API Engineering,API & Communication Protocols,API Technologies,gRPC
+Backend & API Engineering,API & Communication Protocols,API Technologies,REST
+Backend & API Engineering,API & Communication Protocols,API Tooling,Postman
+Backend & API Engineering,API & Communication Protocols,API Tooling,Swagger
+Backend & API Engineering,API & Communication Protocols,API Tooling,GraphQL Mesh
+Backend & API Engineering,API & Communication Protocols,API Tooling,Hasura
+Backend & API Engineering,API & Communication Protocols,Message Brokers & Asynchronous,RabbitMQ
+Backend & API Engineering,API & Communication Protocols,Message Brokers & Asynchronous,Celery
+Backend & API Engineering,Web Servers & Proxies,Servers & Reverse Proxies,Nginx
+Backend & API Engineering,Web Servers & Proxies,Servers & Reverse Proxies,Apache HTTP Server
+Backend & API Engineering,Web Servers & Proxies,Servers & Reverse Proxies,Traefik
+Data & Database Architecture,Transactional Databases (OLTP),Relational (SQL),PostgreSQL
+Data & Database Architecture,Transactional Databases (OLTP),Relational (SQL),MySQL
+Data & Database Architecture,Transactional Databases (OLTP),Relational (SQL),SQLite
+Data & Database Architecture,Transactional Databases (OLTP),Relational (SQL),MariaDB
+Data & Database Architecture,Transactional Databases (OLTP),Relational (SQL),Oracle Database
+Data & Database Architecture,Transactional Databases (OLTP),Distributed/Cloud-Native SQL,PlanetScale
+Data & Database Architecture,Transactional Databases (OLTP),Distributed/Cloud-Native SQL,CockroachDB
+Data & Database Architecture,Transactional Databases (OLTP),NoSQL (Document/Key-Value),MongoDB
+Data & Database Architecture,Transactional Databases (OLTP),NoSQL (Document/Key-Value),Redis
+Data & Database Architecture,Transactional Databases (OLTP),NoSQL (Document/Key-Value),DynamoDB
+Data & Database Architecture,Transactional Databases (OLTP),NoSQL (Document/Key-Value),CouchDB
+Data & Database Architecture,Transactional Databases (OLTP),NoSQL (Document/Key-Value),Memcached
+Data & Database Architecture,Analytical & Big Data (OLAP),Data Warehousing,Snowflake
+Data & Database Architecture,Analytical & Big Data (OLAP),Data Warehousing,BigQuery
+Data & Database Architecture,Analytical & Big Data (OLAP),Data Warehousing,Redshift
+Data & Database Architecture,Analytical & Big Data (OLAP),Data Warehousing,ClickHouse
+Data & Database Architecture,Analytical & Big Data (OLAP),Big Data Processing,Apache Spark
+Data & Database Architecture,Analytical & Big Data (OLAP),Big Data Processing,Hadoop
+Data & Database Architecture,Analytical & Big Data (OLAP),Big Data Processing,Databricks
+Data & Database Architecture,Analytical & Big Data (OLAP),Big Data Processing,Apache Flink
+Data & Database Architecture,Analytical & Big Data (OLAP),Data Orchestration & Streaming,Apache Airflow
+Data & Database Architecture,Analytical & Big Data (OLAP),Data Orchestration & Streaming,Apache Kafka
+Data & Database Architecture,Specialized Databases & Tooling,Graph & Time-Series,Neo4j
+Data & Database Architecture,Specialized Databases & Tooling,Graph & Time-Series,ArangoDB
+Data & Database Architecture,Specialized Databases & Tooling,Graph & Time-Series,InfluxDB
+Data & Database Architecture,Specialized Databases & Tooling,Search Engines,Elasticsearch
+Data & Database Architecture,Specialized Databases & Tooling,Embedded/Storage Engines,RocksDB
+Data & Database Architecture,Specialized Databases & Tooling,ORMs (Object-Relational Mapping),Prisma
+Data & Database Architecture,Specialized Databases & Tooling,ORMs (Object-Relational Mapping),Drizzle
+Data & Database Architecture,Business Intelligence,Visualization & BI Tools,Tableau
+Data & Database Architecture,Business Intelligence,Visualization & BI Tools,Power BI
+Data & Database Architecture,Business Intelligence,Visualization & BI Tools,Looker
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Deep Learning,TensorFlow
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Deep Learning,PyTorch
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Deep Learning,Keras
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Classical ML & Math,Scikit-learn
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Classical ML & Math,Pandas
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Classical ML & Math,NumPy
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Data Visualization (Python),Matplotlib
+"AI, Machine Learning & Data Science",Core Machine Learning & Math,Data Visualization (Python),Seaborn
+"AI, Machine Learning & Data Science",Applied AI & NLP,Generative AI & LLMs,LangChain
+"AI, Machine Learning & Data Science",Applied AI & NLP,Generative AI & LLMs,Hugging Face
+"AI, Machine Learning & Data Science",Applied AI & NLP,Natural Language Processing,NLTK
+"AI, Machine Learning & Data Science",Applied AI & NLP,Natural Language Processing,SpaCy
+"AI, Machine Learning & Data Science",Applied AI & NLP,Computer Vision,OpenCV
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Major Cloud Providers (IaaS),AWS
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Major Cloud Providers (IaaS),Google Cloud Platform
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Major Cloud Providers (IaaS),Microsoft Azure
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Platform as a Service (PaaS),Heroku
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Platform as a Service (PaaS),DigitalOcean
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Edge & Serverless Hosting,Vercel
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Edge & Serverless Hosting,Netlify
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Edge & Serverless Hosting,Cloudflare
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Backend as a Service (BaaS),Firebase
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Backend as a Service (BaaS),Supabase
+Cloud Infrastructure & DevOps,Cloud & Hosting Platforms,Backend as a Service (BaaS),Appwrite
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Containers,Docker
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Containers,Vagrant
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Orchestration & Service Mesh,Kubernetes
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Orchestration & Service Mesh,Helm
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Orchestration & Service Mesh,Nomad
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Orchestration & Service Mesh,Istio
+Cloud Infrastructure & DevOps,Containerization & Orchestration,Orchestration & Service Mesh,Knative
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Provisioning (IaC),Terraform
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Provisioning (IaC),Pulumi
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Provisioning (IaC),CloudFormation
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Provisioning (IaC),SAM
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Configuration Management,Ansible
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Configuration Management,Chef
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Configuration Management,Puppet
+Cloud Infrastructure & DevOps,Infrastructure & Configuration as Code,Configuration Management,SaltStack
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Pipelines & Automation,Jenkins
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Pipelines & Automation,GitHub Actions
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Pipelines & Automation,GitLab CI
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Pipelines & Automation,CircleCI
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Pipelines & Automation,Travis CI
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Continuous Delivery (CD) & Release,ArgoCD
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Continuous Delivery (CD) & Release,Tekton
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Continuous Delivery (CD) & Release,Octopus Deploy
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Continuous Delivery (CD) & Release,Bamboo
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Continuous Delivery (CD) & Release,Bitrise
+Cloud Infrastructure & DevOps,Continuous Integration & Deployment (CI/CD),Continuous Delivery (CD) & Release,Fastlane
+"Quality Assurance, Tooling & Security",Testing & Auditing,End-to-End & Browser Testing,Selenium
+"Quality Assurance, Tooling & Security",Testing & Auditing,End-to-End & Browser Testing,Cypress
+"Quality Assurance, Tooling & Security",Testing & Auditing,End-to-End & Browser Testing,Playwright
+"Quality Assurance, Tooling & Security",Testing & Auditing,Unit & Integration Testing,Jest
+"Quality Assurance, Tooling & Security",Testing & Auditing,Unit & Integration Testing,Mocha
+"Quality Assurance, Tooling & Security",Testing & Auditing,Unit & Integration Testing,JUnit
+"Quality Assurance, Tooling & Security",Testing & Auditing,Unit & Integration Testing,Pytest
+"Quality Assurance, Tooling & Security",Testing & Auditing,Performance & SEO,Lighthouse
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,JavaScript Toolchain,Vite
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,JavaScript Toolchain,Webpack
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,JavaScript Toolchain,Babel
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,JavaScript Toolchain,NPM
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,JavaScript Toolchain,Yarn
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,JavaScript Toolchain,PNPM
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Code Quality & Linting,ESLint
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Code Quality & Linting,Prettier
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Language-Specific Builders,Gradle
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Language-Specific Builders,Maven
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Language-Specific Builders,NuGet
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Language-Specific Builders,PIP
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Language-Specific Builders,Cargo
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,Language-Specific Builders,CocoaPods
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,OS Package Managers,Homebrew
+"Quality Assurance, Tooling & Security",Build Tools & Package Managers,OS Package Managers,Chocolatey
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Protocols & Standards,OAuth
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Protocols & Standards,OpenID Connect
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Protocols & Standards,JWT
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Auth Providers & Management,Auth0
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Auth Providers & Management,Okta
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Auth Providers & Management,Vault
+"Quality Assurance, Tooling & Security",Identity Security & Auth,Security Scanning,SonarQube
+Observability & Monitoring,,Metrics & APM,Prometheus
+Observability & Monitoring,,Metrics & APM,Grafana
+Observability & Monitoring,,Metrics & APM,Datadog
+Observability & Monitoring,,Metrics & APM,New Relic
+Observability & Monitoring,,Metrics & APM,Zabbix
+Observability & Monitoring,,Metrics & APM,Nagios
+Observability & Monitoring,,Tracing & Standards,OpenTelemetry
+Observability & Monitoring,,Logging & Error Tracking,Splunk
+Observability & Monitoring,,Logging & Error Tracking,Sentry
+Observability & Monitoring,,Logging & Error Tracking,Logrocket
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,OS,Linux
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,OS,Unix
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,OS,Windows Server
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,OS,Android OS
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,OS,iOS
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,Virtualization,VMware
+"Platforms, OS & Enterprise Solutions",Operating Systems & Virtualization,Virtualization,OpenStack
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Enterprise Resource Planning (ERP/CRM),SAP
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Enterprise Resource Planning (ERP/CRM),Salesforce
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Enterprise Resource Planning (ERP/CRM),ServiceNow
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Content Management & E-Commerce,WordPress
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Content Management & E-Commerce,Shopify
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Content Management & E-Commerce,Magento
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Game Development,Unity
+"Platforms, OS & Enterprise Solutions",Enterprise CMS & Game Engines,Game Development,Unreal Engine
+"Platforms, OS & Enterprise Solutions",Collaboration & Version Control,Source Control,Git
+"Platforms, OS & Enterprise Solutions",Collaboration & Version Control,Project Management & Documentation,Jira
+"Platforms, OS & Enterprise Solutions",Collaboration & Version Control,Project Management & Documentation,Confluence
+"Platforms, OS & Enterprise Solutions",Collaboration & Version Control,Project Management & Documentation,Bitbucket
