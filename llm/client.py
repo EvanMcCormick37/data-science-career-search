@@ -84,7 +84,11 @@ def complete(
             json=_payload(model, messages, response_format=response_format,
                           temperature=temperature, max_tokens=max_tokens),
         )
-    r.raise_for_status()
+    try:
+        r.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        logger.error(f"OpenRouter error payload: {exc.response.text}")
+        raise
     content = r.json()["choices"][0]["message"]["content"]
     logger.debug(f"[{model}] {len(content)} chars returned")
     return content
@@ -95,7 +99,7 @@ def complete_json(
     messages: list[dict],
     *,
     temperature: float = 0.0,
-    max_tokens: int = 2048,
+    max_tokens: int = 4096,
 ) -> dict:
     """Synchronous completion that parses and returns JSON."""
     raw = complete(model, messages, response_format="json",
@@ -133,7 +137,11 @@ async def async_complete(
             json=_payload(model, messages, response_format=response_format,
                           temperature=temperature, max_tokens=max_tokens),
         )
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            logger.error(f"OpenRouter error payload: {exc.response.text}")
+            raise
         return r.json()["choices"][0]["message"]["content"]
     finally:
         if _own:

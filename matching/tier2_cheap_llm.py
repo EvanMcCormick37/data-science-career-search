@@ -2,7 +2,7 @@
 Tier 2 — Cheap LLM relevance scoring via OpenRouter.
 
 Scores all Tier 1 candidates concurrently using asyncio + httpx.
-Each call asks the LLM to score resume-job fit on 0–100 and provide a
+Each call asks the LLM to score career_profile-job fit on 0–100 and provide a
 one-sentence explanation.  Results are stored on the jobs table for later
 inspection and to avoid re-scoring on repeated query runs.
 
@@ -24,15 +24,33 @@ from llm.client import async_complete_json
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = (
-    "You are a job-fit evaluator. Given a resume and a job listing, "
-    "score the match from 0 to 100 and provide a single concise sentence explaining "
-    "the primary reason for the score. "
-    "Respond ONLY with valid JSON: {\"score\": <integer 0-100>, \"explanation\": <string>}"
-)
+_SYSTEM = """You are an expert career advisor and resume/job evaluator.
+
+Given a candidate's career profile and a specific job listing, determine a 'fit score' which captures how good of a match the applicant is for said job.'
+Your goal is to filter out jobs which are a poor fit, so be brutally honest and realistic in your evaluations. However, if you think a job is a strong fit, don't be afraid to say so emphatically.
+
+Scoring guide:
+  90-100  Exceptional fit — The applicant would be a top candidate for this job, and the job is a perfect fit for the candidate's preferences.
+  75-89   Strong fit — The applicant is a strong candidate and the job is a reasonable fit for their preferences.
+  60-74   Moderate fit — The applicant is an adequate fit for the position, or they are a strong fit but the position isn't a match for their preferences.
+  40-59   Weak fit — There are moderate gaps in experience, making the applicant weak for the job.
+  0-39    Poor fit — There are serious gaps in experience which make it unlikely for the candidate to be seriously considered for the position, or the position is far outside of the candidate's preferances.
+
+Additionally, provide a brief explanation (1-5 sentences) for why you chose the score that you did.
+
+Be specific and use your best judgement and reasoning.  Cite exact skills, experiences, or preferences from both
+the career profile and the job description in your explanation of your fit score.
+
+IMPORTANT:
+Return ONLY valid JSON with this exact structure:
+{
+  "score": <integer 0-100>,
+  "explanation": <explanation>
+}
+"""
 
 
-def _format_user_message(resume_text: str, job: dict) -> str:
+def _format_user_message(career_profile_text: str, job: dict) -> str:
     salary_str = ""
     if job.get("salary_min") and job.get("salary_max"):
         period = job.get("salary_period") or "yearly"
@@ -40,7 +58,8 @@ def _format_user_message(resume_text: str, job: dict) -> str:
         salary_str = f"\nSalary: {currency} {job['salary_min']:,}–{job['salary_max']:,} ({period})"
 
     return (
-        f"RESUME:\n{resume_text}\n\n"
+        f"CAREER PROFILE:\n{career_profile_text}\n\n"
+        f"------------------------------------------"
         f"JOB:\n"
         f"Title: {job.get('title', '')}\n"
         f"Company: {job.get('company_name', '')}\n"
@@ -55,14 +74,14 @@ def _format_user_message(resume_text: str, job: dict) -> str:
 
 async def _score_one(
     job: dict,
-    resume_text: str,
+    career_profile_text: str,
     semaphore: asyncio.Semaphore,
     http_client: httpx.AsyncClient,
 ) -> dict:
     """Score a single job.  Returns the job dict with score/explanation added."""
     messages = [
         {"role": "system", "content": _SYSTEM},
-        {"role": "user",   "content": _format_user_message(resume_text, job)},
+        {"role": "user",   "content": _format_user_message(career_profile_text, job)},
     ]
     async with semaphore:
         try:
@@ -70,7 +89,7 @@ async def _score_one(
                 SCORING_MODEL,
                 messages,
                 temperature=0.0,
-                max_tokens=128,
+                max_tokens=256,
                 client=http_client,
             )
             score       = int(result.get("score", 0))
@@ -85,12 +104,12 @@ async def _score_one(
 
 async def _score_all(
     jobs: list[dict],
-    resume_text: str,
+    career_profile_text: str,
 ) -> list[dict]:
     semaphore   = asyncio.Semaphore(TIER2_CONCURRENCY)
     async with httpx.AsyncClient(timeout=60) as http_client:
         tasks = [
-            _score_one(job, resume_text, semaphore, http_client)
+            _score_one(job, career_profile_text, semaphore, http_client)
             for job in jobs
         ]
         scored = await asyncio.gather(*tasks)
@@ -99,26 +118,26 @@ async def _score_all(
 
 def score_batch(
     jobs: Sequence[dict],
-    resume_text: str,
+    career_profile_text: str,
     *,
     persist: bool = True,
-    top_n: int = TIER2_TOP_N,
+    top_k: int = TIER2_TOP_N,
 ) -> list[dict]:
     """
     Score all jobs in the batch concurrently, persist scores to the DB,
-    and return the top_n by score (descending).
+    and return the top_k by score (descending).
 
     Args:
         jobs:        Tier 1 candidate job dicts (must include 'job_id').
-        resume_text: Full resume text used in the scoring prompt.
+        career_profile_text: Full career_profile text used in the scoring prompt.
         persist:     If True, write tier2_score + tier2_explanation to the DB.
-        top_n:       Number of top-scoring jobs to return for Tier 3.
+        top_k:       Number of top-scoring jobs to return for Tier 3.
 
     Returns:
-        List of job dicts sorted by tier2_score descending, truncated to top_n.
+        List of job dicts sorted by tier2_score descending, truncated to top_k.
     """
     logger.info(f"Tier 2: scoring {len(jobs)} candidates with {SCORING_MODEL!r} …")
-    scored = asyncio.run(_score_all(list(jobs), resume_text))
+    scored = asyncio.run(_score_all(list(jobs), career_profile_text))
 
     if persist:
         for job in scored:
@@ -130,7 +149,7 @@ def score_batch(
                 )
 
     scored.sort(key=lambda j: j.get("tier2_score", 0), reverse=True)
-    top = scored[:top_n]
+    top = scored[:top_k]
 
     logger.info(
         f"Tier 2: top score={top[0]['tier2_score']} for "

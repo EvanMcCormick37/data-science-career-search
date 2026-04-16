@@ -22,7 +22,6 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from config.settings import BACKFILL_STATE_PATH
 from pipeline.fetcher import fetch_jobs, load_queries
 from pipeline.orchestrator import Orchestrator
 
@@ -37,17 +36,12 @@ logger = logging.getLogger("backfill")
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Backfill historical job listings.")
     p.add_argument("--dry-run",     action="store_true", help="Fetch jobs but skip DB writes")
-    p.add_argument("--reset-state", action="store_true", help="Clear backfill progress file and restart")
     p.add_argument("--query",       metavar="NAME",      help="Run a single named query only")
     return p.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-
-    if args.reset_state and BACKFILL_STATE_PATH.exists():
-        BACKFILL_STATE_PATH.unlink()
-        logger.info("Backfill state cleared.")
 
     queries = load_queries()
     if args.query:
@@ -60,7 +54,7 @@ def main() -> None:
 
     orchestrator = None if args.dry_run else Orchestrator()
     total_fetched = 0
-
+    stats = {"inserted": 0, "duplicates": 0, "failed": 0}
     for raw_job in fetch_jobs(mode="backfill", queries=queries):
         total_fetched += 1
         if args.dry_run:
@@ -68,12 +62,14 @@ def main() -> None:
             continue
         # Process one at a time so the state file stays current and we can
         # resume mid-query if the process is killed
-        orchestrator.process_batch([raw_job])
+        batch_stats = orchestrator.process_batch([raw_job])
+        for key in batch_stats:
+            stats[key] += batch_stats[key]
 
     if args.dry_run:
         logger.info(f"Dry run complete — fetched {total_fetched} jobs (nothing written)")
     else:
-        logger.info(f"Backfill complete — {total_fetched} jobs fetched and processed")
+        logger.info(f"Backfill complete — {total_fetched} jobs fetched and processed. {stats["inserted"]} inserted, {stats["duplicates"]} duplicates, {stats['failed']} failed.")
 
 
 if __name__ == "__main__":

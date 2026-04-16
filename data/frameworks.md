@@ -4,9 +4,17 @@
 
 _Languages are the foundation. They often span multiple domains, so they warrant their own root category._
 
-- **Systems & General Purpose:** C++, C#, Java, Go, Rust, Python, Ruby, PHP.
-- **Web & Scripting:** JavaScript, TypeScript, HTML, CSS, Shell, PowerShell.
-- **Specialized & Mobile:** SQL, R, Dart, Scala, Kotlin, Swift.
+### Systems & General Purpose
+
+    - C++, C#, Java, Go, Rust, Python, Ruby, PHP.
+
+### Web & Scripting
+
+    - JavaScript, TypeScript, HTML, CSS, Shell, PowerShell.
+
+### Specialized & Mobile
+
+    - SQL, R, Dart, Scala, Kotlin, Swift.
 
 ---
 

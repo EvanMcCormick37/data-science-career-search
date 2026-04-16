@@ -1,24 +1,24 @@
 domain,subdomain,service,framework
-Core Programming & Markup Languages,,Systems & General Purpose,C++
-Core Programming & Markup Languages,,Systems & General Purpose,C#
-Core Programming & Markup Languages,,Systems & General Purpose,Java
-Core Programming & Markup Languages,,Systems & General Purpose,Go
-Core Programming & Markup Languages,,Systems & General Purpose,Rust
-Core Programming & Markup Languages,,Systems & General Purpose,Python
-Core Programming & Markup Languages,,Systems & General Purpose,Ruby
-Core Programming & Markup Languages,,Systems & General Purpose,PHP
-Core Programming & Markup Languages,,Web & Scripting,JavaScript
-Core Programming & Markup Languages,,Web & Scripting,TypeScript
-Core Programming & Markup Languages,,Web & Scripting,HTML
-Core Programming & Markup Languages,,Web & Scripting,CSS
-Core Programming & Markup Languages,,Web & Scripting,Shell
-Core Programming & Markup Languages,,Web & Scripting,PowerShell
-Core Programming & Markup Languages,,Specialized & Mobile,SQL
-Core Programming & Markup Languages,,Specialized & Mobile,R
-Core Programming & Markup Languages,,Specialized & Mobile,Dart
-Core Programming & Markup Languages,,Specialized & Mobile,Scala
-Core Programming & Markup Languages,,Specialized & Mobile,Kotlin
-Core Programming & Markup Languages,,Specialized & Mobile,Swift
+Core Programming & Markup Languages,Systems & General Purpose,,C++
+Core Programming & Markup Languages,Systems & General Purpose,,C#
+Core Programming & Markup Languages,Systems & General Purpose,,Java
+Core Programming & Markup Languages,Systems & General Purpose,,Go
+Core Programming & Markup Languages,Systems & General Purpose,,Rust
+Core Programming & Markup Languages,Systems & General Purpose,,Python
+Core Programming & Markup Languages,Systems & General Purpose,,Ruby
+Core Programming & Markup Languages,Systems & General Purpose,,PHP
+Core Programming & Markup Languages,Web & Scripting,,JavaScript
+Core Programming & Markup Languages,Web & Scripting,,TypeScript
+Core Programming & Markup Languages,Web & Scripting,,HTML
+Core Programming & Markup Languages,Web & Scripting,,CSS
+Core Programming & Markup Languages,Web & Scripting,,Shell
+Core Programming & Markup Languages,Web & Scripting,,PowerShell
+Core Programming & Markup Languages,Specialized & Mobile,,SQL
+Core Programming & Markup Languages,Specialized & Mobile,,R
+Core Programming & Markup Languages,Specialized & Mobile,,Dart
+Core Programming & Markup Languages,Specialized & Mobile,,Scala
+Core Programming & Markup Languages,Specialized & Mobile,,Kotlin
+Core Programming & Markup Languages,Specialized & Mobile,,Swift
 Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,React
 Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,Angular
 Frontend & Client-Side Ecosystem,Core UI & Web Frameworks,UI Libraries & Frameworks,Vue.js

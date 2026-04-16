@@ -86,7 +86,7 @@ class Deduplicator:
                     """
                     SELECT title
                     FROM jobs
-                    WHERE company_name % %s
+                    WHERE company_name %% %s
                     LIMIT 200
                     """,
                     (job.get("company_name", ""),),

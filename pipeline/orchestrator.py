@@ -30,6 +30,7 @@ from pipeline.dedup import Deduplicator
 from pipeline.embedder import Embedder
 from pipeline.extractor import Extractor
 from pipeline.normalizer import Normalizer
+from pipeline.scorer import IngestScorer
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,7 @@ class Orchestrator:
         self._extractor  = Extractor()
         self._normalizer = Normalizer()
         self._embedder   = Embedder()
+        self._scorer     = IngestScorer()
 
     def process_batch(self, job_dicts: Sequence[dict]) -> dict:
         """
@@ -129,6 +131,11 @@ class Orchestrator:
 
             # ── 5. Embed ──────────────────────────────────────────────────
             embedding = self._embedder.embed_job(job_record)
+
+            # ── 5.5. Score fit (cheap LLM against career profile) ─────────
+            fit_score, fit_explanation = self._scorer.score(job_record)
+            job_record["tier2_score"]       = fit_score
+            job_record["tier2_explanation"] = fit_explanation
 
             # ── 6. Store ──────────────────────────────────────────────────
             try:
@@ -204,6 +211,10 @@ class Orchestrator:
             job_record["frameworks_canonical"] = _ids_to_names(framework_ids, "framework", self._normalizer)
 
             embedding = self._embedder.embed_job(job_record)
+
+            fit_score, fit_explanation = self._scorer.score(job_record)
+            job_record["tier2_score"]       = fit_score
+            job_record["tier2_explanation"] = fit_explanation
 
             try:
                 from db.connection import connection

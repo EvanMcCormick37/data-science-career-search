@@ -1,7 +1,7 @@
 """
 Tier 1 — Vector similarity search via pgvector.
 
-Embeds the resume using the same model as job ingestion, then runs an
+Embeds the career_profile using the same model as job ingestion, then runs an
 approximate nearest-neighbour query against the HNSW index on jobs.embedding.
 
 Returns the top-N active jobs ordered by cosine similarity (highest first).
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def search(
-    resume_embedding: list[float],
+    career_profile_embedding: list[float],
     limit: int = TIER1_CANDIDATES,
     status_filter: str = "active",
 ) -> list[dict]:
@@ -32,7 +32,7 @@ def search(
     Run a cosine similarity search against all jobs with the given status.
 
     Args:
-        resume_embedding: 768-dim normalised embedding vector for the resume.
+        career_profile_embedding: 768-dim normalised embedding vector for the career_profile.
         limit:            Maximum number of jobs to return.
         status_filter:    Only consider jobs with this status (default 'active').
 
@@ -40,7 +40,7 @@ def search(
         List of job dicts with an added 'cosine_similarity' key (float, 0–1).
         Ordered highest similarity first.
     """
-    embedding_str = "[" + ",".join(str(x) for x in resume_embedding) + "]"
+    embedding_str = "[" + ",".join(str(x) for x in career_profile_embedding) + "]"
 
     with connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -88,16 +88,16 @@ def search(
 
 
 def embed_and_search(
-    resume: dict,
+    career_profile: dict,
     limit: int = TIER1_CANDIDATES,
 ) -> list[dict]:
     """
-    Convenience wrapper: embed the resume dict then run the similarity search.
+    Convenience wrapper: embed the career_profile dict then run the similarity search.
 
-    resume dict should contain at minimum:
+    career_profile dict should contain at minimum:
       target_role, qualifications_summary, experience_summary, skills, frameworks
     (see pipeline/embedder.py for the full composition format)
     """
     embedder = Embedder()
-    embedding = embedder.embed_resume(resume)
+    embedding = embedder.embed_career_profile(career_profile)
     return search(embedding, limit=limit)

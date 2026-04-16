@@ -24,7 +24,6 @@ from serpapi import GoogleSearch
 from config.settings import (
     SERPAPI_KEY,
     QUERIES_PATH,
-    BACKFILL_STATE_PATH,
     DAILY_MAX_PAGES,
     BACKFILL_MAX_PAGES,
 )
@@ -41,17 +40,6 @@ def load_queries() -> list[dict]:
     defaults = data.get("defaults", {})
     return [{**defaults, **q} for q in data.get("queries", [])]
 
-
-def _load_state() -> dict:
-    if BACKFILL_STATE_PATH.exists():
-        return json.loads(BACKFILL_STATE_PATH.read_text())
-    return {}
-
-
-def _save_state(state: dict) -> None:
-    BACKFILL_STATE_PATH.write_text(json.dumps(state, indent=2))
-
-
 def _make_params(query: dict) -> dict:
     """Build the SerpAPI params dict from a query entry."""
     params: dict = {"engine": "google_jobs", "api_key": SERPAPI_KEY}
@@ -64,35 +52,30 @@ def _make_params(query: dict) -> dict:
 def fetch_jobs(
     mode: Mode = "daily",
     queries: list[dict] | None = None,
+    max_pages: int | None = None,
 ) -> Generator[dict, None, None]:
     """
     Yield raw SerpAPI job result dicts.
 
     Each yielded dict includes the original SerpAPI fields plus:
       serp_api_json — the full page response (for audit / reprocessing)
+
+    Args:
+        mode:      Controls the default page limit when max_pages is not given.
+        queries:   Query dicts to run; loads from queries.yaml when None.
+        max_pages: Override the mode default.  Useful for ad-hoc single queries.
     """
     if queries is None:
         queries = load_queries()
 
-    state     = _load_state() if mode == "backfill" else {}
-    max_pages = BACKFILL_MAX_PAGES if mode == "backfill" else DAILY_MAX_PAGES
+    if max_pages is None:
+        max_pages = BACKFILL_MAX_PAGES if mode == "backfill" else DAILY_MAX_PAGES
 
     for query in queries:
         name = query.get("name", query.get("q", "unnamed"))
         logger.info(f"[{mode}] Fetching query: {name!r}")
 
-        if mode == "backfill" and state.get(name) == "done":
-            logger.debug(f"  Skipping completed query: {name!r}")
-            continue
-
         params = _make_params(query)
-
-        # Resume from saved pagination token if this query was interrupted
-        if mode == "backfill":
-            saved_token = state.get(f"{name}:next_page_token")
-            if saved_token:
-                params["next_page_token"] = saved_token
-
         for page in range(max_pages):
             try:
                 response = GoogleSearch(params).get_dict()
@@ -101,7 +84,7 @@ def fetch_jobs(
                 break
 
             if "error" in response:
-                logger.error(f"  SerpAPI error: {response['error']}")
+                logger.error(f"  SerpAPI error on page {page + 1} of {name!r}: {response['error']}")
                 break
 
             jobs = response.get("jobs_results", [])
@@ -112,16 +95,9 @@ def fetch_jobs(
 
             next_token = response.get("serpapi_pagination", {}).get("next_page_token")
             if not next_token:
-                if mode == "backfill":
-                    state[name] = "done"
-                    _save_state(state)
+                logger.debug(f" Last page.")
                 break
-
             params["next_page_token"] = next_token
-            if mode == "backfill":
-                state[f"{name}:next_page_token"] = next_token
-                _save_state(state)
-
             time.sleep(0.5)  # gentle rate limiting
 
         logger.info(f"  Done: {name!r}")

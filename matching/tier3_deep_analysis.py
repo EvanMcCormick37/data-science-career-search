@@ -1,12 +1,12 @@
 """
-Tier 3 — Deep resume-fit analysis via Claude (or any capable model).
+Tier 3 — Deep career_profile-fit analysis via Claude (or any capable model).
 
 Takes the top Tier 2 candidates and produces a detailed per-job report:
   - fit_score      (0–100)
-  - strengths      (where the resume aligns well)
-  - gaps           (where the resume falls short)
+  - strengths      (where the career_profile aligns well)
+  - gaps           (where the career_profile falls short)
   - recommendation (apply / apply_with_caveats / skip)
-  - resume_tips    (targeted tweaks for this specific role)
+  - career_profile_tips    (targeted tweaks for this specific role)
 
 Model routing:
   If ANTHROPIC_API_KEY is set, calls the Anthropic API directly.
@@ -28,32 +28,31 @@ from db.operations import update_tier3_scores
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = """You are an expert career advisor and resume evaluator.
+_SYSTEM = """You are an expert career advisor and resume/job evaluator.
 
-Given a candidate's resume and a specific job listing, produce a detailed fit analysis.
-
-Return ONLY valid JSON with this exact structure:
-{
-  "fit_score": <integer 0-100>,
-  "strengths": [<string>, ...],
-  "gaps": [<string>, ...],
-  "recommendation": "apply" | "apply_with_caveats" | "skip",
-  "resume_tips": [<string>, ...]
-}
+Given a candidate's career profile and a specific job listing, determine a 'fit score' which captures how good of a match the applicant is for said job.'
+Your goal is to filter out jobs which are a poor fit, so be brutally honest and realistic in your evaluations. However, if you think a job is a strong fit, don't be afraid to say so emphatically.
 
 Scoring guide:
-  90-100  Exceptional fit — apply immediately
-  75-89   Strong fit — apply with minor tailoring
-  60-74   Moderate fit — apply if interested, address gaps in cover letter
-  40-59   Weak fit — significant gaps, apply only if very interested
-  0-39    Poor fit — skip
+  90-100  Exceptional fit — The applicant would be a top candidate for this job, and the job is a perfect fit for the candidate's preferences.
+  75-89   Strong fit — The applicant is a strong candidate and the job is a reasonable fit for their preferences.
+  60-74   Moderate fit — The applicant is an adequate fit for the position, or they are a strong fit but the position isn't a match for their preferences.
+  40-59   Weak fit — There are moderate gaps in experience, making the applicant weak for the job.
+  0-39    Poor fit — There are serious gaps in experience which make it unlikely for the candidate to be seriously considered for the position, or the position is far outside of the candidate's preferances.
 
 Be specific and actionable.  Cite exact skills, experiences, or wording from both
-the resume and the job description.  Resume tips should be concrete changes to the
-resume text, not general advice."""
+the career profile and the job description.  Resume tips should be concrete changes to the
+career profile text, not general advice.
+Return ONLY valid JSON with this exact structure:
+
+{
+  "fit_score": <integer 0-100>,
+  "explanation": <explanation>
+}
+"""
 
 
-def _format_user_message(resume_text: str, job: dict) -> str:
+def _format_user_message(career_profile_text: str, job: dict) -> str:
     salary_str = ""
     if job.get("salary_min"):
         period   = job.get("salary_period") or "yearly"
@@ -62,7 +61,7 @@ def _format_user_message(resume_text: str, job: dict) -> str:
         salary_str = f"\nSalary: {currency} {job['salary_min']:,}{hi} ({period})"
 
     return (
-        f"=== RESUME ===\n{resume_text}\n\n"
+        f"=== CAREER PROFILE ===\n{career_profile_text}\n\n"
         f"=== JOB LISTING ===\n"
         f"Title: {job.get('title', '')}\n"
         f"Company: {job.get('company_name', '')}\n"
@@ -77,45 +76,25 @@ def _format_user_message(resume_text: str, job: dict) -> str:
     )
 
 
-def _call_anthropic(messages: list[dict]) -> str:
-    """Call the Anthropic API directly (avoids OpenRouter markup for Claude models)."""
-    import anthropic  # optional dependency; only imported if ANTHROPIC_API_KEY is set
-
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    system = next((m["content"] for m in messages if m["role"] == "system"), "")
-    user_messages = [m for m in messages if m["role"] != "system"]
-
-    response = client.messages.create(
-        model=DEEP_ANALYSIS_MODEL.split("/")[-1],  # strip "anthropic/" prefix if present
-        max_tokens=2048,
-        system=system,
-        messages=user_messages,
-    )
-    return response.content[0].text
-
-
 def _call_openrouter(messages: list[dict]) -> str:
     from llm.client import complete
-    return complete(DEEP_ANALYSIS_MODEL, messages, temperature=0.1, max_tokens=2048)
+    return complete(DEEP_ANALYSIS_MODEL, messages, temperature=0.1, max_tokens=4096)
 
 
-def _analyse_one(job: dict, resume_text: str) -> dict:
+def _analyse_one(job: dict, career_profile_text: str) -> dict:
     """Run deep analysis for a single job. Returns the job dict with analysis added."""
     messages = [
         {"role": "system", "content": _SYSTEM},
-        {"role": "user",   "content": _format_user_message(resume_text, job)},
+        {"role": "user",   "content": _format_user_message(career_profile_text, job)},
     ]
 
     try:
-        if ANTHROPIC_API_KEY:
-            raw = _call_anthropic(messages)
-        else:
-            raw = _call_openrouter(messages)
+        raw = _call_openrouter(messages)
 
         analysis = json.loads(raw)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as err:
         logger.error(
-            f"Tier 3 JSON parse failure for {job.get('title')!r} "
+            f"Tier 3 JSON parse failure for {job.get('title')!r} - {err} "
             f"@ {job.get('company_name')!r}"
         )
         analysis = {
@@ -123,7 +102,7 @@ def _analyse_one(job: dict, resume_text: str) -> dict:
             "strengths":      [],
             "gaps":           ["Analysis failed — JSON parse error"],
             "recommendation": "skip",
-            "resume_tips":    [],
+            "career_profile_tips":    [],
         }
     except Exception as exc:
         logger.error(f"Tier 3 API error for job {job.get('job_id')}: {exc}")
@@ -132,7 +111,7 @@ def _analyse_one(job: dict, resume_text: str) -> dict:
             "strengths":      [],
             "gaps":           [f"Analysis failed: {exc}"],
             "recommendation": "skip",
-            "resume_tips":    [],
+            "career_profile_tips":    [],
         }
 
     return {**job, **analysis}
@@ -140,7 +119,7 @@ def _analyse_one(job: dict, resume_text: str) -> dict:
 
 def analyse_batch(
     jobs: Sequence[dict],
-    resume_text: str,
+    career_profile_text: str,
     *,
     persist: bool = True,
 ) -> list[dict]:
@@ -150,7 +129,7 @@ def analyse_batch(
 
     Args:
         jobs:        Tier 2 top candidates.
-        resume_text: Full resume text.
+        career_profile_text: Full career_profile text.
         persist:     If True, write scores to the DB.
 
     Returns:
@@ -165,7 +144,7 @@ def analyse_batch(
         company = job.get("company_name", "?")
         logger.info(f"  [{i}/{len(jobs)}] {title!r} @ {company!r}")
 
-        enriched = _analyse_one(job, resume_text)
+        enriched = _analyse_one(job, career_profile_text)
         results.append(enriched)
 
         if persist and job.get("job_id"):
@@ -173,7 +152,7 @@ def analyse_batch(
                 "strengths":      enriched.get("strengths", []),
                 "gaps":           enriched.get("gaps", []),
                 "recommendation": enriched.get("recommendation", ""),
-                "resume_tips":    enriched.get("resume_tips", []),
+                "career_profile_tips":    enriched.get("career_profile_tips", []),
             })
             update_tier3_scores(
                 job["job_id"],

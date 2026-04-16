@@ -37,12 +37,43 @@ CREATE TABLE IF NOT EXISTS jobs (
     embedding             vector(768),         -- all-mpnet-base-v2 output
     dedup_hash            TEXT UNIQUE,         -- SHA-256 of normalised title+company+location
 
-    -- Relevance scores (populated lazily per query run, resume-specific)
+    -- Relevance scores (tier2 populated at ingestion; tier3 populated on demand)
     tier2_score           REAL,
     tier2_explanation     TEXT,
     tier3_score           REAL,
     tier3_explanation     TEXT
 );
+
+
+-- ============================================================
+-- APPLICATIONS TABLE
+-- ============================================================
+-- Tracks every job application submitted from this pipeline.
+-- applications.job_id  → jobs (which job was applied to)
+-- jobs.application_id  → applications (back-pointer set when an application exists)
+-- The back-pointer is added via ALTER TABLE below to break the circular FK dependency.
+
+CREATE TABLE IF NOT EXISTS applications (
+    application_id   SERIAL PRIMARY KEY,
+    job_id           INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    date_applied     DATE,
+    assistance_level TEXT CHECK (assistance_level IN ('ai', 'assisted', 'human')),
+    cover_letter     TEXT,
+    resume           TEXT,
+    cold_calls       INTEGER DEFAULT 0,   -- number of cold outreach attempts
+    reached_human    INTEGER DEFAULT 0,   -- boolean: 1 = spoke to a real person
+    interviews       INTEGER DEFAULT 0,   -- number of interview rounds completed
+    offer            INTEGER DEFAULT 0    -- boolean: 1 = offer received
+);
+
+-- Back-pointer from jobs to their application (NULL until an application exists).
+-- IF NOT EXISTS makes this idempotent on re-runs.
+ALTER TABLE jobs
+    ADD COLUMN IF NOT EXISTS application_id INTEGER
+        REFERENCES applications(application_id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_applications_job
+    ON applications (job_id);
 
 
 -- ============================================================
