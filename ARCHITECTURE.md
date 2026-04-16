@@ -1,83 +1,96 @@
-# Job Search Pipeline — Architecture Specification
+# Job Search Pipeline — Architecture
 
 ## Overview
 
-A Python-based pipeline that ingests job listings from SerpAPI (Google Jobs), extracts structured metadata via a cheap LLM, stores everything in PostgreSQL (with pgvector), and supports two use cases:
+A Python-based pipeline that ingests job listings from SerpAPI (Google Jobs), extracts structured metadata via a cheap LLM, scores every job for career fit at ingestion time, stores everything in PostgreSQL (with pgvector), and supports two use cases:
 
-1. **Personal job filtering** — match listings against a resume using a three-tier relevance scoring funnel.
-2. **Public dataviz** (future, do not build) — surface job market trends (in-demand skills, frameworks, and other metadata) on a web frontend.
+1. **Personal job filtering** — surface the best-fit jobs using a two-stage scoring approach: cheap LLM fit scoring at ingestion, expensive LLM deep analysis on demand for the top candidates.
+2. **Public dataviz** (future, do not build) — surface job market trends (in-demand skills, frameworks, salary distributions) on a web frontend.
 
 ---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        INGESTION PIPELINE                           │
-│                     (Python, scheduled daily)                       │
-│                                                                     │
-│  ┌──────────┐    ┌──────────┐    ┌───────────┐    ┌─────────────┐   │
-│  │ SerpAPI  │───▶│  Dedup   │──▶│ LLM       │──▶│ Embed +     │   │
-│  │ Fetcher  │    │ (Fuzzy)  │    │ Extractor │    │ Store (PG)  │   │
-│  └──────────┘    └──────────┘    └───────────┘    └─────────────┘   │
-│       │                                │                            │
-│       ▼                                ▼                            │
-│  Backfill mode: paginate         skills.md + frameworks.md          │
-│  historical listings             in system prompt guide             │
-│  (100-300 queries)               extraction against canonical       │
-│                                  taxonomy                           │
-│  Steady-state: ~30-50                                               │
-│  queries/day for new                                                │
-│  listings only                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                           INGESTION PIPELINE                             │
+│                        (Python, scheduled daily)                         │
+│                                                                          │
+│  ┌──────────┐  ┌────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐  │
+│  │ SerpAPI  │─▶│ Dedup  │─▶│  Extract  │─▶│  Embed +   │─▶│  Score   │  │
+│  │ Fetcher  │  │ (Fuzzy)│  │ (cheap    │  │  Normalize │  │  (cheap  │  │
+│  │          │  │        │  │  LLM)     │  │            │  │   LLM)   │  │
+│  └──────────┘  └────────┘  └───────────┘  └────────────┘  └────┬─────┘  │
+│                                                                  │       │
+│                                                                  ▼       │
+│                                                           Store to PG    │
+│                                                      (tier2_score saved  │
+│                                                        with each job)    │
+└──────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────┐
-│                     NORMALIZATION LAYER                              │
-│                                                                     │
-│  LLM returns skill/framework name                                   │
-│       │                                                             │
-│       ▼                                                             │
-│  Check alias table → canonical match found? → insert canonical ID   │
-│       │ no match                                                    │
-│       ▼                                                             │
-│  Check canonical names directly → exact match? → insert skill ID    │
-│       │ no match                                                    │
-│       ▼                                                             │
-│  Insert as candidate (is_candidate = 1)                             │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        NORMALIZATION LAYER                               │
+│                                                                          │
+│  LLM returns skill/framework name                                        │
+│       │                                                                  │
+│       ▼                                                                  │
+│  Check alias table → canonical match found? → insert canonical ID        │
+│       │ no match                                                         │
+│       ▼                                                                  │
+│  Check canonical names directly → exact match? → insert skill ID         │
+│       │ no match                                                         │
+│       ▼                                                                  │
+│  Insert as candidate (is_candidate = 1)                                  │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────┐
-│                       QUERY PIPELINE                                │
-│                                                                     │
-│  ┌──────────┐   ┌──────────────┐   ┌───────────┐   ┌───────────┐  │
-│  │ Embed    │──▶│ pgvector     │──▶│ Cheap LLM │──▶│ Claude    │  │
-│  │ Resume   │   │ Top 50-100   │   │ Score all  │   │ Deep      │  │
-│  │          │   │ (cosine sim) │   │ candidates │   │ Analysis  │  │
-│  └──────────┘   └──────────────┘   └───────────┘   └───────────┘  │
-│                                                                     │
-│  Tier 1: Vector       Tier 2: Cheap LLM     Tier 3: Claude         │
-│  similarity search    relevance scoring      detailed fit analysis  │
-│  (free, instant)      (top 100 → scored)     (top 10-15 only)      │
-│                                                                     │
-│  Output: ranked shortlist with fit explanations                     │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         MATCHING — PRIMARY PATH                          │
+│                     (scripts/score_top_jobs.py)                          │
+│                                                                          │
+│  Query DB: ORDER BY tier2_score DESC                                     │
+│       │    (scores pre-computed at ingestion)                            │
+│       ▼                                                                  │
+│  Top K jobs ──▶ Expensive LLM deep analysis ──▶ Ranked shortlist         │
+│                 (DEEP_ANALYSIS_MODEL)             with strengths, gaps,  │
+│                                                   recommendation,        │
+│                                                   resume tips            │
+│                                                                          │
+│  Results persisted to tier3_score / tier3_explanation                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       MATCHING — AD-HOC PATH                             │
+│                   (scripts/match_career_profile.py)                      │
+│                                                                          │
+│  ┌──────────┐  ┌──────────────┐  ┌────────────┐  ┌───────────────────┐  │
+│  │  Embed   │─▶│  pgvector    │─▶│ Cheap LLM  │─▶│  Expensive LLM   │  │
+│  │  Career  │  │  Top 100     │  │ re-score   │  │  Deep Analysis   │  │
+│  │  Profile │  │ (cosine sim) │  │ (optional) │  │  (optional)      │  │
+│  └──────────┘  └──────────────┘  └────────────┘  └───────────────────┘  │
+│                                                                          │
+│  --tier 1: vector search only (instant)                                  │
+│  --tier 2: vector → cheap LLM re-score                                   │
+│  --tier 3: full pipeline (vector → cheap LLM → expensive LLM)           │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Technology Stack
 
-| Component         | Choice                       | Rationale                                                          |
-| ----------------- | ---------------------------- | ------------------------------------------------------------------ |
-| Language          | Python 3.11+                 | Ecosystem for ML/NLP, rapid prototyping                            |
-| Database          | PostgreSQL 16 + pgvector     | Single DB for relational data AND vector search                    |
-| Embedding model   | all-mpnet-base-v2 (local)    | 768-dim, 384-token window                                          |
-| Extraction LLM    | Cheap model via OpenRouter   | Structured extraction at ~$0.001/job. Modular — swap models freely |
-| Scoring LLM       | Same cheap model             | Tier 2 relevance scoring                                           |
-| Deep analysis LLM | Claude Code subagent         | Tier 3 detailed resume fit analysis, top 10-15 only                |
-| Task scheduling   | cron (local) or APScheduler  | Daily trigger, no need for Celery at this scale                    |
-| Future frontend   | JS (React or Svelte) + D3.js | Dataviz flexibility (DO NOT BUILD YET)                             |
+| Component              | Choice                          | Rationale                                                          |
+| ---------------------- | ------------------------------- | ------------------------------------------------------------------ |
+| Language               | Python 3.11+                    | Ecosystem for ML/NLP, rapid prototyping                            |
+| Database               | PostgreSQL 16 + pgvector        | Single DB for relational data AND vector search                    |
+| Embedding model (large)| all-mpnet-base-v2 (local)       | 768-dim, 384-token window. Used for job + career profile vectors stored in DB |
+| Embedding model (small)| all-MiniLM-L6-v2 (local)        | 384-dim. Used for short-string similarity (skill/framework name dedup). Never stored in DB |
+| Model cache            | `models/` directory             | sentence-transformers downloads on first use, loads from disk thereafter |
+| Extraction LLM         | Cheap model via OpenRouter      | Structured metadata extraction at ~$0.001/job. Swap by changing config |
+| Fit scoring LLM        | Same cheap model (SCORING_MODEL)| Scores every job at ingestion time. Pre-populates tier2_score in DB |
+| Deep analysis LLM      | Expensive model via OpenRouter  | On-demand deep analysis for top-K jobs. Defaults to claude-sonnet  |
+| Task scheduling        | cron (local) or APScheduler     | Daily trigger, no need for Celery at this scale                    |
+| Future frontend        | JS (React or Svelte) + D3.js    | Dataviz flexibility (DO NOT BUILD YET)                             |
 
 ### Why PostgreSQL + pgvector (not a separate VectorDB)
 
@@ -89,9 +102,11 @@ OpenRouter provides a unified API across dozens of model providers. This gives y
 
 - A single integration point — swap models by changing a config string, not rewriting API calls.
 - Access to the cheapest available models (Gemini Flash, Kimi K2, DeepSeek, etc.) without separate API keys for each.
-- A natural A/B testing setup: run the same extraction prompt against two models, compare output quality.
+- A natural A/B testing setup: run the same prompt against two models and compare output quality.
 
-Build the LLM client as a thin wrapper that accepts a model identifier and routes through OpenRouter. Keep per-model API keys in config for fallback direct access if needed.
+### Why two embedding models
+
+Job records and career profile embeddings are stored in the pgvector column and compared against each other — they must use the same model (all-mpnet-base-v2, 768-dim). Skill and framework name similarity (used in `review_candidates.py`) only requires short-string comparison that is never stored in the DB. all-MiniLM-L6-v2 handles this at half the size. Loading the large model solely for 1–5 word strings would be wasteful. `embed_text()` auto-routes to the small model for strings ≤ 10 words.
 
 ---
 
@@ -107,7 +122,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;  -- for fuzzy text matching
 -- CORE JOBS TABLE
 -- ============================================================
 
-CREATE TABLE jobs (
+CREATE TABLE IF NOT EXISTS jobs (
     job_id                SERIAL PRIMARY KEY,
     title                 TEXT NOT NULL,
     url                   TEXT NOT NULL,
@@ -124,42 +139,65 @@ CREATE TABLE jobs (
     salary_currency       TEXT DEFAULT 'USD',
     salary_period         TEXT,                -- 'yearly', 'hourly', 'monthly'
     qualifications        TEXT,                -- raw extracted text from SerpAPI
-    responsibilities      TEXT,                -- raw extracted text from SerpAPI
+    responsibilities      TEXT,               -- raw extracted text from SerpAPI
     date_listed           DATE,
     date_ingested         TIMESTAMP DEFAULT NOW(),
     date_updated          TIMESTAMP DEFAULT NOW(),
     status                TEXT DEFAULT 'active',  -- 'active', 'expired', 'duplicate', 'extraction_failed'
     serp_api_json         JSONB,               -- full raw response for auditability and reprocessing
     embedding             vector(768),         -- all-mpnet-base-v2 output
-    dedup_hash            TEXT UNIQUE,         -- normalized hash for dedup
+    dedup_hash            TEXT UNIQUE,         -- SHA-256 of normalised title+company+location
 
-    -- Relevance scoring (populated lazily, per query run)
-    tier2_score           REAL,
+    -- Fit scores
+    tier2_score           REAL,                -- cheap LLM score, populated at ingestion
     tier2_explanation     TEXT,
-    tier3_score           REAL,
-    tier3_explanation     TEXT
+    tier3_score           REAL,                -- expensive LLM score, populated on demand
+    tier3_explanation     TEXT,
+
+    -- Application tracking (NULL until an application is submitted)
+    application_id        INTEGER REFERENCES applications(application_id) ON DELETE SET NULL
 );
+
+
+-- ============================================================
+-- APPLICATIONS TABLE
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS applications (
+    application_id   SERIAL PRIMARY KEY,
+    job_id           INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    date_applied     DATE,
+    assistance_level TEXT CHECK (assistance_level IN ('ai', 'assisted', 'human')),
+    cover_letter     TEXT,
+    resume           TEXT,
+    cold_calls       INTEGER DEFAULT 0,   -- number of cold outreach attempts
+    reached_human    INTEGER DEFAULT 0,   -- boolean: 1 = spoke to a real person
+    interviews       INTEGER DEFAULT 0,   -- number of interview rounds completed
+    offer            INTEGER DEFAULT 0    -- boolean: 1 = offer received
+);
+
+CREATE INDEX IF NOT EXISTS idx_applications_job ON applications (job_id);
 
 
 -- ============================================================
 -- SKILLS TAXONOMY
 -- ============================================================
 
-CREATE TABLE skills (
+CREATE TABLE IF NOT EXISTS skills (
     skill_id        SERIAL PRIMARY KEY,
-    domain          TEXT NOT NULL,          -- top-level category (e.g. 'Backend', 'Data Engineering')
-    core_competency TEXT,                   -- grouping within domain (e.g. 'Databases', 'APIs')
-    competency      TEXT,                   -- sub-grouping (e.g. 'Relational Databases')
-    name            TEXT UNIQUE NOT NULL,   -- canonical name, normalized lowercase
-    is_candidate    INTEGER DEFAULT 0       -- 1 = proposed by LLM, not yet accepted into taxonomy
+    domain          TEXT NOT NULL,          -- top-level category
+    core_competency TEXT,                   -- grouping within domain
+    competency      TEXT,                   -- sub-grouping
+    name            TEXT UNIQUE NOT NULL,   -- canonical name
+    is_candidate    INTEGER DEFAULT 0       -- 1 = proposed by LLM, not yet accepted
 );
 
-CREATE TABLE skill_aliases (
-    alias    TEXT PRIMARY KEY,              -- variant form (e.g. 'postgres', 'postgresql')
+CREATE TABLE IF NOT EXISTS skill_aliases (
+    alias    TEXT PRIMARY KEY,
     skill_id INTEGER NOT NULL REFERENCES skills(skill_id) ON DELETE CASCADE
 );
 
-CREATE TABLE job_skills (
+CREATE TABLE IF NOT EXISTS job_skills (
     job_id   INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE,
     skill_id INTEGER REFERENCES skills(skill_id) ON DELETE CASCADE,
     PRIMARY KEY (job_id, skill_id)
@@ -170,21 +208,21 @@ CREATE TABLE job_skills (
 -- FRAMEWORKS TAXONOMY
 -- ============================================================
 
-CREATE TABLE frameworks (
+CREATE TABLE IF NOT EXISTS frameworks (
     framework_id    SERIAL PRIMARY KEY,
-    domain          TEXT NOT NULL,          -- top-level category (e.g. 'Cloud', 'Frontend')
-    subdomain       TEXT,                   -- grouping (e.g. 'AWS', 'React Ecosystem')
-    service         TEXT,                   -- specific service area (e.g. 'Compute', 'State Management')
-    name            TEXT UNIQUE NOT NULL,   -- canonical name
-    is_candidate    INTEGER DEFAULT 0       -- 1 = proposed by LLM, not yet accepted
+    domain          TEXT NOT NULL,
+    subdomain       TEXT,
+    service         TEXT,
+    name            TEXT UNIQUE NOT NULL,
+    is_candidate    INTEGER DEFAULT 0
 );
 
-CREATE TABLE framework_aliases (
-    alias        TEXT PRIMARY KEY,          -- variant form (e.g. 'k8s', 'kube')
+CREATE TABLE IF NOT EXISTS framework_aliases (
+    alias        TEXT PRIMARY KEY,
     framework_id INTEGER NOT NULL REFERENCES frameworks(framework_id) ON DELETE CASCADE
 );
 
-CREATE TABLE job_frameworks (
+CREATE TABLE IF NOT EXISTS job_frameworks (
     job_id       INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE,
     framework_id INTEGER REFERENCES frameworks(framework_id) ON DELETE CASCADE,
     PRIMARY KEY (job_id, framework_id)
@@ -195,25 +233,30 @@ CREATE TABLE job_frameworks (
 -- INDEXES
 -- ============================================================
 
-CREATE INDEX idx_jobs_embedding ON jobs USING hnsw (embedding vector_cosine_ops);
-CREATE INDEX idx_jobs_status ON jobs (status);
-CREATE INDEX idx_jobs_date_listed ON jobs (date_listed);
-CREATE INDEX idx_jobs_dedup_hash ON jobs (dedup_hash);
-CREATE INDEX idx_jobs_company_trgm ON jobs USING gin (company_name gin_trgm_ops);
-CREATE INDEX idx_jobs_title_trgm ON jobs USING gin (title gin_trgm_ops);
-CREATE INDEX idx_skill_aliases_skill ON skill_aliases (skill_id);
-CREATE INDEX idx_framework_aliases_framework ON framework_aliases (framework_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_embedding    ON jobs USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_jobs_status       ON jobs (status);
+CREATE INDEX IF NOT EXISTS idx_jobs_tier2_score  ON jobs (tier2_score DESC);
+CREATE INDEX IF NOT EXISTS idx_jobs_date_listed  ON jobs (date_listed);
+CREATE INDEX IF NOT EXISTS idx_jobs_dedup_hash   ON jobs (dedup_hash);
+CREATE INDEX IF NOT EXISTS idx_jobs_company_trgm ON jobs USING gin (company_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_jobs_title_trgm   ON jobs USING gin (title gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_skill_aliases_skill          ON skill_aliases (skill_id);
+CREATE INDEX IF NOT EXISTS idx_framework_aliases_framework  ON framework_aliases (framework_id);
 ```
 
 ### Schema Design Notes
 
-**JSONB for serp_api_json:** The full raw SerpAPI response is preserved so you can re-extract metadata when your extraction prompt improves, without re-hitting the API. This is your audit trail and reprocessing safety net.
+**`serp_api_json`:** The full raw SerpAPI response is preserved so you can re-extract metadata when your extraction prompt improves, without re-hitting the API. This is your audit trail and reprocessing safety net.
 
-**Tier scores on the jobs table:** These are specific to YOUR resume and are populated lazily (only during a query run). Tier 1 (vector cosine similarity) is computed at query time and not stored. If you later build the public-facing version, user-specific scores would move to a separate `user_job_scores` table.
+**`tier2_score` / `tier2_explanation`:** Populated eagerly at ingestion by the cheap LLM scorer (`pipeline/scorer.py`). Every active job in the DB has a fit score as soon as it is inserted. If the career profile (`data/career_profile.md`) is missing or still a placeholder, scoring is silently skipped and the columns remain NULL.
 
-**is_candidate flag:** Skills and frameworks extracted by the LLM that don't match any canonical name or known alias are inserted with `is_candidate = 1`. They participate in job-skill linkage immediately (so no data is lost), but are excluded from dataviz aggregation until manually reviewed and either promoted (set `is_candidate = 0`) or merged into an existing canonical entry.
+**`tier3_score` / `tier3_explanation`:** Populated on demand by `scripts/score_top_jobs.py` when you run the expensive LLM over the top-K candidates.
 
-**Alias tables vs. in-memory normalization:** Alias tables live in Postgres for durability and easy manual curation (adding a new alias is a single INSERT). At startup, the normalizer loads the full alias mapping into a Python dict for fast in-memory lookup during ingestion. The DB is the source of truth; the dict is a cache.
+**`application_id` back-pointer:** `jobs.application_id` references `applications` and is NULL until you submit an application for that role. The circular FK (`applications.job_id → jobs`, `jobs.application_id → applications`) is resolved by adding `application_id` via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, which runs after both tables are created.
+
+**`is_candidate` flag:** Skills and frameworks extracted by the LLM that don't match any canonical name or known alias are inserted with `is_candidate = 1`. They participate in job-skill linkage immediately (no data is lost), but are excluded from dataviz aggregation until reviewed via `review_candidates.py`.
+
+**Alias tables vs. in-memory normalization:** Alias tables live in Postgres for durability and easy manual curation. At startup, the normalizer loads the full alias mapping into Python dicts for fast in-process lookup. The DB is the source of truth; the dict is a cache.
 
 ---
 
@@ -223,219 +266,181 @@ CREATE INDEX idx_framework_aliases_framework ON framework_aliases (framework_id)
 
 ```
 pipeline/fetcher.py
-├── Accepts: search queries (role + location combinations) from config/queries.yaml
-├── Handles: pagination, rate limiting, backfill vs. daily mode
-├── Outputs: list of raw job dicts
-└── Writes: raw JSON to staging (or directly to processing queue)
+├── Accepts: queries from config/queries.yaml (role × location combinations)
+│           OR a one-off query dict from scripts/single_query.py
+├── Modes:
+│   ├── daily    — DAILY_MAX_PAGES pages per query (new listings only)
+│   ├── backfill — up to BACKFILL_MAX_PAGES pages; resumes from state file on restart
+│   └── ad-hoc   — single query, max_pages set by caller (single_query.py)
+├── Rate limiting: 0.5s sleep between pages; stays under ~30 queries/day in daily mode
+└── Outputs: generator of raw job dicts, each with serp_api_json attached
 ```
-
-**Backfill mode:** Iterate through the target query set (role titles × locations), paginating each. Track completed queries in a local state file so the process can resume if interrupted.
-
-**Daily mode:** Same query set, filtered by `date_posted:today` or SerpAPI's `chips` parameter for recent listings. Fetch first 1-2 pages per query only.
-
-**Budget management:** SerpAPI's 1,000 searches/month ≈ 33/day. Daily steady-state should stay under 30 queries to preserve headroom. Prioritize breadth of role titles over geographic variation — Google Jobs already has geographic reach.
 
 ### Step 2: Fuzzy Dedup
 
 ```
 pipeline/dedup.py
-├── Input: raw job dict from fetcher
-├── Normalize: lowercase, strip punctuation, expand abbreviations
-│   ("Sr." → "senior", "Eng." → "engineer", etc.)
-├── Generate dedup_hash: hash(normalized_title + normalized_company + normalized_location)
-├── Check: does this hash exist in the DB?
-│   ├── Exact hash match → skip, mark as duplicate
-│   └── No exact match → secondary fuzzy check:
-│       Query jobs with same normalized company_name (pg_trgm index),
-│       run thefuzz.token_sort_ratio on title, threshold ≥ 85
-│       ├── Match found → skip, mark as duplicate
-│       └── No match → pass through to extraction
-└── Output: deduplicated job dicts
+├── Normalize: lowercase, strip punctuation ("Sr." → "senior", "Eng." → "engineer")
+├── Generate dedup_hash: SHA-256(normalized_title | normalized_company | normalized_location)
+├── Check exact hash match in DB → duplicate: skip
+└── Secondary fuzzy check (same company via pg_trgm, thefuzz title ratio ≥ 85) → duplicate: skip
 ```
-
-**Performance:** The fuzzy check scopes to same-company listings only, avoiding O(n²) comparison. The `pg_trgm` GIN index on `company_name` makes the company lookup fast.
 
 ### Step 3: LLM Metadata Extraction
 
 ```
 pipeline/extractor.py
-├── Input: raw job description + qualifications + responsibilities
-├── System prompt includes: skills.md and frameworks.md as reference taxonomy
-├── LLM call: cheap model via OpenRouter, structured JSON output
-├── Extracts:
-│   ├── employment_type (enum)
-│   ├── attendance (enum)
-│   ├── seniority (enum)
-│   ├── experience_years_min / max (integers)
-│   ├── salary_min / max / currency / period (if present)
-│   ├── skills (list of strings — model instructed to use canonical names from skills.md)
-│   └── frameworks (list of strings — same, from frameworks.md)
-├── Pass extracted skills/frameworks through normalizer (Step 3a)
-└── Output: structured job record ready for insertion
+├── Model: EXTRACTION_MODEL (cheap, via OpenRouter)
+├── System prompt: skills.md + frameworks.md as reference taxonomy
+├── Extracts: employment_type, attendance, seniority, experience_years_min/max,
+│            salary_min/max/currency/period, skills[], frameworks[]
+├── Validation: enum fields coerced to known values or null; lists stripped of non-strings
+└── Error handling: retry once on failure; mark as 'extraction_failed' after two failures
 ```
-
-**Prompt design:**
-
-- Force JSON output with a strict schema definition.
-- Include 2-3 few-shot examples demonstrating correct extraction.
-- Instruct the model to use canonical names from the provided taxonomy. If the model encounters a skill/framework not in the taxonomy, it should return the name as-is (the normalizer handles it downstream).
-- Instruct the model to return `null` for any field not clearly present in the listing — never guess.
-- Keep the prompt minimal beyond these requirements. This is a classification/extraction task.
-
-**System prompt size consideration:** `skills.md` and `frameworks.md` are included in every extraction call. Monitor their token count — if they grow beyond ~1.5K tokens combined, consider trimming the system prompt to a flat list of canonical names only and keeping hierarchy metadata (domain, core_competency, etc.) in the database and CSV files only.
-
-**Error handling:** If the LLM returns malformed JSON, retry once with the same input. If it fails again, store the job with `status = 'extraction_failed'` and the raw `serp_api_json` intact. Reprocess failed jobs in batch later.
 
 ### Step 3a: Skill & Framework Normalization
 
 ```
 pipeline/normalizer.py
-├── On startup: load alias tables from DB into in-memory dicts
-│   skill_alias_map:     {"postgres": 42, "postgresql": 42, "pg": 42, ...}
-│   framework_alias_map: {"k8s": 17, "kube": 17, "kubernetes": 17, ...}
-├── For each skill string returned by the LLM:
-│   1. Lowercase and strip whitespace
-│   2. Check skill_alias_map → match? → return canonical skill_id
-│   3. Check skills table by name (exact match) → match? → return skill_id
-│   4. No match → INSERT into skills with is_candidate = 1, return new skill_id
-├── Same logic for frameworks
-└── Output: list of resolved skill_ids and framework_ids for junction table insertion
+├── On startup: load full alias tables from DB into in-memory dicts (one read, cached)
+├── For each name: alias lookup → exact name lookup → insert as candidate (is_candidate=1)
+└── Output: resolved skill_ids and framework_ids for junction table insertion
 ```
 
-**Alias table seeding:** Populate initial aliases from a `skill_aliases.csv` and `framework_aliases.csv` alongside the canonical taxonomy CSVs. Start with 50-100 common variants for your target field. Expand as you observe candidate entries that are obvious variants.
-
-**Cache invalidation:** When you manually add new aliases or promote candidates, either restart the pipeline or expose a `reload_aliases()` method that refreshes the in-memory dicts from the DB.
-
-### Step 4: Embed + Store
+### Step 4: Embed
 
 ```
-pipeline/embedder.py
-├── Compose embedding string:
-│   "{title} | {qualifications} | {responsibilities} | {skills} | {frameworks}"
-├── Truncation strategy (if input exceeds 384 tokens):
-│   Priority order: title > qualifications > responsibilities > skills > frameworks
-│   Truncate from the end of the lowest-priority field first
-├── Generate embedding: sentence-transformers all-mpnet-base-v2 (local)
-├── INSERT job record + embedding into jobs table
-└── INSERT resolved skill_ids / framework_ids into junction tables
+pipeline/embedder.py — embed_job()
+├── Model: EMBEDDING_MODEL_LARGE (all-mpnet-base-v2), loaded from models/ cache
+├── Composition: "{title} | {qualifications} | {responsibilities} | {skills} | {frameworks}"
+└── Truncation: lowest-priority fields (frameworks → skills → responsibilities → qualifications)
+               trimmed first when total exceeds EMBEDDING_MAX_TOKENS (384)
+```
+
+### Step 5: Fit Scoring
+
+```
+pipeline/scorer.py — IngestScorer.score()
+├── Model: SCORING_MODEL (cheap, same as EXTRACTION_MODEL by default)
+├── Career profile: loaded once from data/career_profile.md and cached
+├── Scores 0–100 with a 1–5 sentence explanation
+├── Returns (None, None) if career profile is missing/placeholder → job stored with NULL score
+└── Output: tier2_score + tier2_explanation, stored with the job record
+```
+
+### Step 6: Store
+
+```
+db/operations.py — insert_job()
+├── INSERT into jobs: all extracted fields + embedding + tier2_score + tier2_explanation
+└── INSERT into job_skills / job_frameworks junction tables
 ```
 
 ---
 
-## Query Pipeline Detail (Resume Matching)
+## Matching Detail
 
-### Tier 1 — Vector Similarity (free, instant)
+### Primary path — `scripts/score_top_jobs.py`
 
+Because every job is scored at ingestion, the most common workflow requires no embedding at query time:
+
+```
+db/operations.py — get_top_scored_jobs(top_k, min_score)
+├── SELECT top_k active jobs WHERE tier2_score >= min_score ORDER BY tier2_score DESC
+└── Pass to matching/tier3_deep_analysis.py — analyse_batch()
+    ├── Model: DEEP_ANALYSIS_MODEL (expensive; defaults to claude-sonnet via OpenRouter)
+    ├── Per-job output: fit_score, explanation, strengths, gaps, recommendation, resume tips
+    └── Persists tier3_score + tier3_explanation to DB
+```
+
+Usage:
+```
+python scripts/score_top_jobs.py               # top 15 by tier2_score
+python scripts/score_top_jobs.py --top-k 20
+python scripts/score_top_jobs.py --min-score 60
+python scripts/score_top_jobs.py --no-persist
+python scripts/score_top_jobs.py --output results.json
+```
+
+### Ad-hoc path — `scripts/match_career_profile.py`
+
+For exploration or re-scoring against an updated career profile without re-running ingestion:
+
+**Tier 1 — Vector similarity (free, instant)**
 ```sql
-SELECT job_id, title, company_name, location,
-       1 - (embedding <=> :resume_embedding) AS cosine_similarity
-FROM jobs
-WHERE status = 'active'
-ORDER BY embedding <=> :resume_embedding
-LIMIT 100;
+SELECT job_id, ..., 1 - (embedding <=> :career_embedding) AS cosine_similarity
+FROM jobs WHERE status = 'active' AND embedding IS NOT NULL
+ORDER BY embedding <=> :career_embedding LIMIT 100;
 ```
+Career profile is embedded with the large model using the same composition template as jobs.
 
-The resume is embedded using the same model and a parallel string template adapted for resume context:
-`"{target_role} | {qualifications_summary} | {experience_summary} | {skills} | {frameworks}"`
+**Tier 2 — Cheap LLM re-score (optional, asyncio + httpx)**
+Runs concurrently over the Tier 1 candidates. Updates `tier2_score` / `tier2_explanation` in the DB. ~15–30s for 100 jobs at negligible cost.
 
-### Tier 2 — Cheap LLM Scoring (via OpenRouter)
-
-For each of the top 100 candidates from Tier 1, send to the cheap model:
-
-```
-System: You are a job matching evaluator. Given a resume and a job listing,
-        score the match from 0-100 and provide a one-sentence explanation.
-        Respond in JSON: {"score": int, "explanation": string}
-
-User: RESUME: {resume_text}
-      JOB: {title} at {company_name}
-      Description: {description}
-      Qualifications: {qualifications}
-```
-
-**Execution:** Run concurrently (asyncio + httpx) with appropriate rate limiting for the chosen model. 100 calls to a cheap model completes in ~15-30 seconds at negligible cost.
-
-Store `tier2_score` and `tier2_explanation` on the jobs table.
-
-### Tier 3 — Claude Deep Analysis
-
-Take the top 10-15 by `tier2_score`. Send to Claude with a detailed prompt including the full resume:
-
-**Outputs per job:**
-
-- Fit score (0-100)
-- Strengths: where the resume matches well
-- Gaps: where the resume falls short
-- Recommendation: apply / apply with caveats / skip
-- Suggested resume adjustments for this specific role
-
-Store `tier3_score` and `tier3_explanation`.
+**Tier 3 — Expensive LLM deep analysis (optional)**
+Same as the primary path. Operates on the Tier 2 top-K.
 
 ---
 
-## Candidate Review Workflow
+## Candidate Taxonomy Review
 
-Periodically review skills/frameworks where `is_candidate = 1`:
+`scripts/review_candidates.py` handles the ongoing curation loop for LLM-proposed skill/framework candidates (`is_candidate = 1`).
 
-```sql
--- See all candidate skills, ordered by how many jobs reference them
-SELECT s.skill_id, s.name, COUNT(js.job_id) AS job_count
-FROM skills s
-JOIN job_skills js ON s.skill_id = js.skill_id
-WHERE s.is_candidate = 1
-GROUP BY s.skill_id, s.name
-ORDER BY job_count DESC;
-```
+**Interactive actions per candidate:** promote / merge / discard / skip / quit.
 
-**Actions per candidate:**
+**Similarity detection:** Before the review loop, all canonical entries are embedded using the small embedding model (`all-MiniLM-L6-v2`). For each candidate, the top-K most similar canonical entries (default 5) are displayed — no threshold, always shows K results.
 
-1. **Promote:** Set `is_candidate = 0`, assign proper `domain` / `core_competency` / `competency` values. The skill is now part of the canonical taxonomy.
-2. **Merge:** The candidate is a variant of an existing skill. Add an entry to `skill_aliases` mapping the candidate name to the existing `skill_id`. Update all `job_skills` rows to point to the canonical `skill_id`. Delete the candidate row.
-3. **Discard:** The candidate is noise (e.g. the LLM extracted a sentence fragment as a skill). Delete the candidate and its `job_skills` entries.
-
-**Semi-automated duplicate detection:** Embed each candidate name using the same embedding model, compute cosine similarity against all canonical skill name embeddings, and flag any pair with similarity > 0.85 as a probable duplicate for human review.
+**Promote flow:** Cascading menu driven by the live taxonomy from the DB:
+- Skills: domain → core_competency → competency (each level shows existing values + "add new")
+- Frameworks: domain → subdomain → service (service is optional; "none" offered when applicable)
 
 ---
 
 ## Project Structure
 
 ```
-job-pipeline/
+data-science-career-search/
 ├── config/
-│   ├── settings.py              # API keys, DB connection, model identifiers
-│   └── queries.yaml             # Search query definitions (roles × locations)
+│   ├── settings.py              # All config from env vars (.env)
+│   ├── queries.yaml             # Search query definitions (roles × locations)
+│   └── queries.example.yaml     # Template — copy to queries.yaml
 ├── pipeline/
-│   ├── fetcher.py               # SerpAPI ingestion (backfill + daily)
+│   ├── fetcher.py               # SerpAPI ingestion (daily / backfill / ad-hoc)
 │   ├── dedup.py                 # Fuzzy deduplication
 │   ├── extractor.py             # LLM metadata extraction via OpenRouter
-│   ├── embedder.py              # Embedding generation (all-mpnet-base-v2)
 │   ├── normalizer.py            # Skill/framework alias resolution + candidate insertion
-│   └── orchestrator.py          # Ties pipeline steps together, supports reprocess mode
+│   ├── embedder.py              # Two-model embedding (large for DB, small for similarity)
+│   ├── scorer.py                # Ingestion-time fit scoring (cheap LLM)
+│   └── orchestrator.py          # Orchestrates steps 1–6; supports reprocess mode
 ├── matching/
-│   ├── tier1_vector.py          # pgvector similarity search
-│   ├── tier2_cheap_llm.py       # Batch cheap LLM scoring via OpenRouter
-│   └── tier3_deep_analysis.py   # Claude detailed analysis
+│   ├── tier1_vector.py          # pgvector cosine similarity search
+│   ├── tier2_cheap_llm.py       # Ad-hoc batch cheap LLM scoring (asyncio)
+│   └── tier3_deep_analysis.py   # Expensive LLM deep fit analysis
 ├── llm/
-│   └── client.py                # Thin OpenRouter wrapper — accepts model ID, returns structured output
+│   └── client.py                # Thin OpenRouter wrapper (sync + async, JSON mode)
 ├── db/
-│   ├── schema.sql               # DDL (the schema defined above)
-│   ├── seed/
-│   │   ├── skills.csv           # Initial canonical skills from skills.md
-│   │   ├── frameworks.csv       # Initial canonical frameworks from frameworks.md
-│   │   ├── skill_aliases.csv    # Known variant mappings
-│   │   └── framework_aliases.csv
-│   ├── migrations/              # Schema evolution
-│   └── connection.py            # DB connection pool (psycopg or asyncpg)
+│   ├── schema.sql               # Full DDL (idempotent; run via seed.py)
+│   ├── connection.py            # Threaded psycopg2 connection pool
+│   ├── operations.py            # All SQL reads/writes (no raw SQL elsewhere)
+│   └── seed/
+│       ├── seed.py              # Bootstrap: runs schema.sql + seeds taxonomy CSVs
+│       ├── skills.csv           # Canonical skills taxonomy
+│       ├── frameworks.csv       # Canonical frameworks taxonomy
+│       ├── skill_aliases.csv    # Known variant → canonical mappings (~160 entries)
+│       └── framework_aliases.csv# Known variant → canonical mappings (~140 entries)
 ├── scripts/
-│   ├── backfill.py              # One-time historical ingestion
-│   ├── daily_run.py             # Daily pipeline entry point (cron target)
-│   ├── match_resume.py          # Run the 3-tier matching flow
-│   ├── review_candidates.py     # Semi-automated candidate skill review
-│   └── reprocess.py             # Re-run extraction on stored serp_api_json
+│   ├── backfill.py              # One-time historical ingestion (all queries.yaml)
+│   ├── daily_run.py             # Daily cron entry point (expire + fetch + ingest)
+│   ├── single_query.py          # Ad-hoc ingestion for a single search query
+│   ├── reprocess.py             # Re-run extraction on stored serp_api_json
+│   ├── score_top_jobs.py        # Expensive LLM deep analysis on top-K by tier2_score
+│   ├── match_career_profile.py  # Ad-hoc 3-tier matching (vector → cheap LLM → expensive LLM)
+│   └── review_candidates.py     # Interactive taxonomy curation for LLM-proposed candidates
 ├── data/
-│   ├── resume.md                # Your resume in structured format
-│   ├── skills.md                # Skill taxonomy (included in LLM system prompt)
-│   └── frameworks.md            # Framework taxonomy (included in LLM system prompt)
+│   ├── career_profile.md        # Your resume/career profile (used for scoring)
+│   ├── skills.md                # Skill taxonomy reference (included in extraction prompt)
+│   └── frameworks.md            # Framework taxonomy reference (included in extraction prompt)
+├── models/                      # sentence-transformers model cache (gitignored)
 ├── tests/
 ├── requirements.txt
 └── README.md
@@ -443,17 +448,57 @@ job-pipeline/
 
 ---
 
+## Environment Variables (`.env`)
+
+| Variable               | Default                        | Purpose                                      |
+| ---------------------- | ------------------------------ | -------------------------------------------- |
+| `DATABASE_URL`         | *(required)*                   | PostgreSQL connection string                 |
+| `SERPAPI_KEY`          | *(required)*                   | SerpAPI API key                              |
+| `OPENROUTER_API_KEY`   | *(required)*                   | OpenRouter API key                           |
+| `EXTRACTION_MODEL`     | `google/gemini-flash-1.5`      | LLM for metadata extraction                  |
+| `SCORING_MODEL`        | `google/gemini-flash-1.5`      | LLM for ingestion-time fit scoring           |
+| `DEEP_ANALYSIS_MODEL`  | `anthropic/claude-sonnet-4-5`  | LLM for expensive deep analysis              |
+| `EMBEDDING_MODEL_LARGE`| `all-mpnet-base-v2`            | Large embedding model (jobs + career profile)|
+| `EMBEDDING_MODEL_SMALL`| `all-MiniLM-L6-v2`             | Small embedding model (skill name similarity)|
+| `EMBEDDING_DIM`        | `768`                          | Vector dimension (must match large model)    |
+| `EMBEDDING_MAX_TOKENS` | `384`                          | Max tokens for large model truncation        |
+| `TIER1_CANDIDATES`     | `100`                          | Vector search result limit                   |
+| `TIER2_TOP_N`          | `15`                           | Top-N passed to Tier 3 in ad-hoc flow        |
+| `TIER2_CONCURRENCY`    | `10`                           | Async concurrency for ad-hoc cheap LLM calls |
+| `DEEP_ANALYSIS_TOP_K`  | `15`                           | Default K for score_top_jobs.py              |
+| `DAILY_MAX_PAGES`      | `1`                            | SerpAPI pages per query in daily mode        |
+| `BACKFILL_MAX_PAGES`   | `10`                           | SerpAPI pages per query in backfill mode     |
+| `JOB_EXPIRY_DAYS`      | `30`                           | Days before active listings are marked expired|
+| `DEDUP_FUZZY_THRESHOLD`| `85`                           | thefuzz token_sort_ratio threshold           |
+| `ANTHROPIC_API_KEY`    | *(optional)*                   | Direct Anthropic key (bypasses OpenRouter)   |
+
+---
+
 ## Cost Estimates (Monthly, Steady-State)
 
-| Item                         | Volume         | Est. Cost       |
-| ---------------------------- | -------------- | --------------- |
-| SerpAPI                      | ~900 searches  | $25.00 (plan)   |
-| Cheap model (extraction)     | ~9,000 jobs    | ~$0.50–1.00     |
-| Cheap model (tier 2 scoring) | ~100/query run | ~$0.01/run      |
-| Claude (tier 3 analysis)     | ~15/query run  | ~$0.50–1.00/run |
-| all-mpnet-base-v2            | local          | $0              |
-| PostgreSQL                   | local          | $0              |
-| **Total**                    |                | **~$27/mo**     |
+| Item                              | Volume             | Est. Cost          |
+| --------------------------------- | ------------------ | ------------------ |
+| SerpAPI                           | ~900 searches      | $25.00 (plan)      |
+| Cheap model — extraction          | ~9,000 jobs        | ~$0.50–1.00        |
+| Cheap model — ingestion scoring   | ~9,000 jobs        | ~$0.50–1.00        |
+| Expensive LLM — deep analysis     | ~15 jobs/run       | ~$0.50–1.00/run    |
+| Embedding models (local)          | —                  | $0                 |
+| PostgreSQL (local)                | —                  | $0                 |
+| **Total (excl. deep analysis)**   |                    | **~$27–28/mo**     |
+
+The main change from the original cost model is that cheap LLM scoring now runs on every ingested job (~9,000/month) rather than on ~100 candidates per query run. At ~$0.001/call this adds roughly $9/month but eliminates per-query scoring latency.
+
+---
+
+## Setup Sequence
+
+1. Copy `.env.example` → `.env` and fill in `DATABASE_URL`, `SERPAPI_KEY`, `OPENROUTER_API_KEY`
+2. `python -m db.seed.seed` — creates schema and seeds taxonomy
+3. Copy `config/queries.example.yaml` → `config/queries.yaml`, add your target searches
+4. Fill in `data/career_profile.md` with your real resume (required for ingestion-time scoring)
+5. `python scripts/backfill.py` — historical ingestion (downloads models on first run to `models/`)
+6. `python scripts/daily_run.py` — daily cron target
+7. `python scripts/score_top_jobs.py` — run expensive LLM over the top-K pre-scored jobs
 
 ---
 
@@ -461,21 +506,11 @@ job-pipeline/
 
 1. **System prompt size monitoring:** Track the token count of `skills.md` + `frameworks.md` as the taxonomy grows. If combined size exceeds ~1.5K tokens, trim the system prompt to a flat name list and keep hierarchy metadata in the database only.
 
-2. **Job expiry:** Mark listings as expired after 30 days unless refreshed by a subsequent SerpAPI fetch:
+2. **Embedding model upgrade path:** If retrieval quality disappoints, swap `EMBEDDING_MODEL_LARGE` to a larger model (e.g. `bge-large-en-v1.5`, 1024-dim). This requires re-embedding the full corpus from stored text, altering the `vector(768)` column dimension, and rebuilding the HNSW index. The stored `serp_api_json` makes re-embedding possible without re-fetching from SerpAPI.
 
-   ```sql
-   UPDATE jobs SET status = 'expired'
-   WHERE date_listed < NOW() - INTERVAL '30 days'
-   AND status = 'active';
-   ```
+3. **Application tracking UI:** The `applications` table exists but there is no script or interface for creating/updating application records. A simple CLI script (`scripts/log_application.py`) or a minimal web form would close this gap.
 
-   Run this as part of the daily cron.
-
-3. **Reprocessing pipeline:** When the extraction prompt improves, re-run extraction against stored `serp_api_json` without re-fetching from SerpAPI. The orchestrator should support a `reprocess` mode that reads from the DB.
-
-4. **Embedding model upgrade path:** If retrieval quality disappoints, swap to a larger model (e.g. `bge-large-en-v1.5`, 1024-dim) by re-embedding the corpus from stored text. Alter the vector column dimension and rebuild the HNSW index.
-
-5. **Public website (Goal 2, do not build yet):**
+4. **Public website (Goal 2, do not build yet):**
    - API layer (FastAPI) serving aggregated skill/framework counts, trend-over-time, salary distributions.
    - Visualization queries are trivial with the normalized schema:
      ```sql
@@ -486,8 +521,6 @@ job-pipeline/
      WHERE j.status = 'active'
        AND j.date_listed > NOW() - INTERVAL '30 days'
        AND s.is_candidate = 0
-     GROUP BY s.name
-     ORDER BY demand DESC
-     LIMIT 25;
+     GROUP BY s.name ORDER BY demand DESC LIMIT 25;
      ```
-   - User resume matching would expose Tiers 1–2 only (free tier) with Tier 3 behind auth/payment.
+   - User resume matching would expose the vector search + cheap LLM scoring only; expensive LLM behind auth/payment.
