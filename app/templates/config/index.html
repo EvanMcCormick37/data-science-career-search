@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4">
+  <h1 class="text-2xl font-bold text-gray-800 mb-2">Configuration</h1>
+  <p class="text-gray-500 text-sm mb-8">Edit pipeline settings and your career profile.</p>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+    <!-- Queries card -->
+    <a href="/config/queries"
+       class="block border border-gray-200 rounded-xl p-6 bg-white hover:shadow-md hover:border-blue-200 transition-all group">
+      <div class="text-blue-600 text-2xl mb-3">&#128269;</div>
+      <h2 class="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">Search Queries</h2>
+      <p class="text-sm text-gray-500 mt-1">Add, edit, or remove the job search queries used by SerpAPI ingestion.</p>
+    </a>
+
+    <!-- Career profile card -->
+    <a href="/config/profile"
+       class="block border border-gray-200 rounded-xl p-6 bg-white hover:shadow-md hover:border-blue-200 transition-all group">
+      <div class="text-blue-600 text-2xl mb-3">&#128101;</div>
+      <h2 class="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">Career Profile</h2>
+      <p class="text-sm text-gray-500 mt-1">Edit the career profile used for job scoring and tier-2/tier-3 analysis.</p>
+    </a>
+
+  </div>
+</div>
+{% endblock %}

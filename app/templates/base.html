@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Search Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.3" defer></script>
+  <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link rel="stylesheet" href="/static/app.css" />
+  <script src="/static/app.js" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-900 pt-14">
+
+  <!-- Fixed top nav -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-800 text-white h-14 flex items-center px-4 shadow-lg">
+    <div class="flex items-center gap-6 flex-1">
+      <span class="font-bold text-lg tracking-tight">Job Search</span>
+      <a href="/jobs"         class="text-slate-300 hover:text-white transition-colors text-sm font-medium">Jobs</a>
+      <a href="/applications" class="text-slate-300 hover:text-white transition-colors text-sm font-medium">Applications</a>
+      <a href="/config"       class="text-slate-300 hover:text-white transition-colors text-sm font-medium">Config</a>
+    </div>
+    <!-- Freshness stats -->
+    <div class="flex items-center gap-4 text-xs text-slate-300">
+      {% if freshness %}
+      <span title="Active jobs">
+        <span class="text-green-400 font-semibold">{{ freshness.active_total }}</span> active
+      </span>
+      <span title="Ingested in last 24h">
+        <span class="text-blue-400 font-semibold">{{ freshness.ingested_today }}</span> today
+      </span>
+      <span title="Jobs awaiting tier-3 scoring">
+        <span class="text-yellow-400 font-semibold">{{ freshness.awaiting_tier3 }}</span> awaiting T3
+      </span>
+      <span title="Last ingestion time" class="text-slate-400">
+        {{ freshness.last_ingested_ago }}
+      </span>
+      {% endif %}
+    </div>
+  </nav>
+
+  {% block content %}{% endblock %}
+
+</body>
+</html>

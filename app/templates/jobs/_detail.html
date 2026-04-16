@@ -1,0 +1,191 @@
+<div class="p-4 flex flex-col gap-4 text-sm">
+
+  <!-- Header -->
+  <div>
+    <h2 class="text-base font-bold text-gray-900 leading-tight">{{ job.title }}</h2>
+    <p class="text-gray-600 font-medium">{{ job.company_name }}</p>
+  </div>
+
+  <!-- Pills row -->
+  <div class="flex flex-wrap gap-1.5">
+    {% if job.location %}
+    <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{{ job.location }}</span>
+    {% endif %}
+    {% if job.attendance %}
+    <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">{{ job.attendance }}</span>
+    {% endif %}
+    {% if job.seniority %}
+    <span class="bg-purple-50 text-purple-700 text-xs px-2 py-0.5 rounded-full">{{ job.seniority }}</span>
+    {% endif %}
+    {% if job.employment_type %}
+    <span class="bg-orange-50 text-orange-700 text-xs px-2 py-0.5 rounded-full">{{ job.employment_type }}</span>
+    {% endif %}
+  </div>
+
+  <!-- Salary -->
+  {% if job.salary_min or job.salary_max %}
+  <div class="text-gray-700">
+    <span class="font-medium">Salary:</span>
+    {% if job.salary_min and job.salary_max %}
+      {{ job.salary_currency or '$' }}{{ "{:,}".format(job.salary_min) }} – {{ "{:,}".format(job.salary_max) }}
+    {% elif job.salary_max %}
+      up to {{ job.salary_currency or '$' }}{{ "{:,}".format(job.salary_max) }}
+    {% else %}
+      from {{ job.salary_currency or '$' }}{{ "{:,}".format(job.salary_min) }}
+    {% endif %}
+    {% if job.salary_period %}<span class="text-gray-400 text-xs"> / {{ job.salary_period }}</span>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- External link -->
+  {% if job.url %}
+  <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer"
+     class="text-blue-600 hover:text-blue-800 underline text-xs truncate block">
+    View Job Listing &rarr;
+  </a>
+  {% endif %}
+
+  <!-- Scores -->
+  <div class="border border-gray-100 rounded-lg p-3 bg-gray-50 flex flex-col gap-2">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-medium text-gray-500 w-6">T2</span>
+      {% if job.tier2_score is not none %}
+        {% if job.tier2_score >= 75 %}
+          <span class="score-badge bg-green-100 text-green-800">{{ job.tier2_score | int }}</span>
+        {% elif job.tier2_score >= 50 %}
+          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier2_score | int }}</span>
+        {% else %}
+          <span class="score-badge bg-red-100 text-red-800">{{ job.tier2_score | int }}</span>
+        {% endif %}
+        {% if job.tier2_explanation %}
+        <span class="text-xs text-gray-600 flex-1">{{ job.tier2_explanation }}</span>
+        {% endif %}
+      {% else %}
+        <span class="score-badge bg-gray-100 text-gray-400">—</span>
+        <span class="text-xs text-gray-400">Not yet scored</span>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-medium text-gray-500 w-6">T3</span>
+      {% if job.tier3_score is not none %}
+        {% if job.tier3_score >= 75 %}
+          <span class="score-badge bg-green-100 text-green-800">{{ job.tier3_score | int }}</span>
+        {% elif job.tier3_score >= 50 %}
+          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier3_score | int }}</span>
+        {% else %}
+          <span class="score-badge bg-red-100 text-red-800">{{ job.tier3_score | int }}</span>
+        {% endif %}
+        {% if job.tier3_explanation %}
+        <span class="text-xs text-gray-600 flex-1">{{ job.tier3_explanation }}</span>
+        {% endif %}
+      {% else %}
+        <span class="score-badge bg-gray-100 text-gray-400">—</span>
+        <span class="text-xs text-gray-400 italic">Deep analysis not yet run</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Skills & Frameworks -->
+  {% if job.skills %}
+  <div>
+    <p class="text-xs font-medium text-gray-500 mb-1">Skills</p>
+    <div class="flex flex-wrap gap-1">
+      {% for s in job.skills %}
+      <span class="bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full">{{ s }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if job.frameworks %}
+  <div>
+    <p class="text-xs font-medium text-gray-500 mb-1">Frameworks & Tools</p>
+    <div class="flex flex-wrap gap-1">
+      {% for f in job.frameworks %}
+      <span class="bg-teal-50 text-teal-700 text-xs px-2 py-0.5 rounded-full">{{ f }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Status control -->
+  <div class="flex items-center gap-2">
+    <label class="text-xs font-medium text-gray-600">Status:</label>
+    <select
+      name="status"
+      hx-patch="/jobs/{{ job.job_id }}/status"
+      hx-trigger="change"
+      hx-target="#job-row-{{ job.job_id }}"
+      hx-swap="outerHTML"
+      class="text-sm border border-gray-300 rounded px-2 py-1"
+    >
+      <option value="active"  {% if job.status == 'active'  %}selected{% endif %}>Active</option>
+      <option value="expired" {% if job.status == 'expired' %}selected{% endif %}>Expired</option>
+      <option value="closed"  {% if job.status == 'closed'  %}selected{% endif %}>Closed</option>
+    </select>
+  </div>
+
+  <!-- Application action -->
+  {% if job.application_id is none and job.status == 'active' %}
+  <div>
+    <a
+      hx-get="/applications/new?job_id={{ job.job_id }}"
+      hx-target="#detail-panel"
+      hx-swap="innerHTML"
+      class="inline-block cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-2 rounded transition-colors"
+    >
+      Log Application
+    </a>
+  </div>
+  {% elif job.application_id is not none %}
+  <div>
+    <a href="/applications/{{ job.application_id }}/detail"
+       class="text-blue-600 hover:text-blue-800 text-xs font-medium underline">
+      View Application &rarr;
+    </a>
+  </div>
+  {% endif %}
+
+  <!-- Collapsible: Description -->
+  {% if job.description %}
+  <div x-data="{ open: false }" class="border border-gray-100 rounded-lg overflow-hidden">
+    <button
+      @click="open = !open"
+      class="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
+    >
+      <span>Description</span>
+      <span x-text="open ? '▲' : '▼'" class="text-xs text-gray-400"></span>
+    </button>
+    <div x-show="open" x-cloak class="px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">{{ job.description }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Collapsible: Qualifications -->
+  {% if job.qualifications %}
+  <div x-data="{ open: false }" class="border border-gray-100 rounded-lg overflow-hidden">
+    <button
+      @click="open = !open"
+      class="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
+    >
+      <span>Qualifications</span>
+      <span x-text="open ? '▲' : '▼'" class="text-xs text-gray-400"></span>
+    </button>
+    <div x-show="open" x-cloak class="px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">{{ job.qualifications }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Collapsible: Responsibilities -->
+  {% if job.responsibilities %}
+  <div x-data="{ open: false }" class="border border-gray-100 rounded-lg overflow-hidden">
+    <button
+      @click="open = !open"
+      class="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-700"
+    >
+      <span>Responsibilities</span>
+      <span x-text="open ? '▲' : '▼'" class="text-xs text-gray-400"></span>
+    </button>
+    <div x-show="open" x-cloak class="px-3 py-2 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">{{ job.responsibilities }}</div>
+  </div>
+  {% endif %}
+
+</div>

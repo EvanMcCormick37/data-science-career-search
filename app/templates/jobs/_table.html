@@ -1,0 +1,160 @@
+<div id="jobs-table" class="flex flex-col h-full">
+
+  <!-- Pagination info -->
+  <div class="px-4 py-2 border-b border-gray-200 bg-white flex items-center justify-between text-sm text-gray-600 flex-shrink-0">
+    <span>
+      {% set start = (page - 1) * page_size + 1 %}
+      {% set end   = [page * page_size, total] | min %}
+      {% if total == 0 %}
+        No jobs found
+      {% else %}
+        {{ start }}–{{ end }} of {{ total }} jobs
+      {% endif %}
+    </span>
+    <span class="text-xs text-gray-400">Page {{ page }}</span>
+  </div>
+
+  <!-- Table -->
+  <div class="flex-1 overflow-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead class="bg-gray-100 sticky top-0 z-10">
+        <tr>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Title</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Company</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Location</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Att</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Sen</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Salary</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">T2</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">T3</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Status</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Applied</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody">
+        {% for job in jobs %}
+        <tr
+          id="job-row-{{ job.job_id }}"
+          class="cursor-pointer hover:bg-blue-50 border-b border-gray-100 transition-colors"
+          hx-get="/jobs/{{ job.job_id }}/detail"
+          hx-target="#detail-panel"
+          hx-swap="innerHTML"
+          hx-on::after-request="window.dispatchEvent(new CustomEvent('panel-open'))"
+        >
+          <td class="px-3 py-2 max-w-[14rem] truncate font-medium" title="{{ job.title }}">{{ job.title }}</td>
+          <td class="px-3 py-2 max-w-[10rem] truncate text-gray-700" title="{{ job.company_name }}">{{ job.company_name }}</td>
+          <td class="px-3 py-2 max-w-[8rem] truncate text-gray-500 text-xs" title="{{ job.location or '' }}">{{ job.location or '—' }}</td>
+          <td class="px-3 py-2 text-xs text-gray-500">{{ job.attendance or '—' }}</td>
+          <td class="px-3 py-2 text-xs text-gray-500">{{ job.seniority or '—' }}</td>
+          <td class="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+            {% if job.salary_min or job.salary_max %}
+              {% if job.salary_min and job.salary_max %}
+                ${{ (job.salary_min // 1000) }}k–${{ (job.salary_max // 1000) }}k
+              {% elif job.salary_max %}
+                up to ${{ (job.salary_max // 1000) }}k
+              {% else %}
+                from ${{ (job.salary_min // 1000) }}k
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-3 py-2">
+            {% if job.tier2_score is not none %}
+              {% if job.tier2_score >= 75 %}
+                <span class="score-badge bg-green-100 text-green-800">{{ job.tier2_score | int }}</span>
+              {% elif job.tier2_score >= 50 %}
+                <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier2_score | int }}</span>
+              {% else %}
+                <span class="score-badge bg-red-100 text-red-800">{{ job.tier2_score | int }}</span>
+              {% endif %}
+            {% else %}
+              <span class="score-badge bg-gray-100 text-gray-500">—</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2">
+            {% if job.tier3_score is not none %}
+              {% if job.tier3_score >= 75 %}
+                <span class="score-badge bg-green-100 text-green-800">{{ job.tier3_score | int }}</span>
+              {% elif job.tier3_score >= 50 %}
+                <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier3_score | int }}</span>
+              {% else %}
+                <span class="score-badge bg-red-100 text-red-800">{{ job.tier3_score | int }}</span>
+              {% endif %}
+            {% else %}
+              <span class="score-badge bg-gray-100 text-gray-400">—</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2">
+            {% if job.status == 'active' %}
+              <span class="score-badge bg-green-100 text-green-700">active</span>
+            {% elif job.status == 'expired' %}
+              <span class="score-badge bg-gray-100 text-gray-600">expired</span>
+            {% elif job.status == 'closed' %}
+              <span class="score-badge bg-red-100 text-red-700">closed</span>
+            {% else %}
+              <span class="score-badge bg-gray-100 text-gray-500">{{ job.status }}</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-xs">
+            {% if job.application_id %}
+              {% if job.application_state == 'submitted' %}
+                <span class="score-badge bg-blue-100 text-blue-700">submitted</span>
+              {% elif job.application_state == 'interviewing' %}
+                <span class="score-badge bg-purple-100 text-purple-700">interview</span>
+              {% elif job.application_state == 'offer' %}
+                <span class="score-badge bg-green-100 text-green-700">offer</span>
+              {% elif job.application_state == 'rejected' %}
+                <span class="score-badge bg-red-100 text-red-700">rejected</span>
+              {% elif job.application_state == 'withdrawn' %}
+                <span class="score-badge bg-gray-100 text-gray-600">withdrawn</span>
+              {% else %}
+                <span class="score-badge bg-blue-100 text-blue-700">applied</span>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="10" class="px-4 py-8 text-center text-gray-400">No jobs match your filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination controls -->
+  {% if total > page_size %}
+  <div class="px-4 py-3 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
+    {% set total_pages = ((total - 1) // page_size) + 1 %}
+    {% if page > 1 %}
+    <a href="?page={{ page - 1 }}&sort={{ sort }}&tier2_min={{ tier2_min or '' }}&tier3_min={{ tier3_min or '' }}&title={{ title }}&company={{ company }}&location={{ location }}&description={{ description }}{% for s in statuses %}&statuses={{ s }}{% endfor %}{% for s in seniority %}&seniority={{ s }}{% endfor %}{% for a in attendance %}&attendance={{ a }}{% endfor %}"
+       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+       hx-get="/jobs"
+       hx-target="#jobs-table"
+       hx-swap="outerHTML"
+       hx-push-url="true">
+      &larr; Prev
+    </a>
+    {% else %}
+    <span class="text-sm text-gray-300">&larr; Prev</span>
+    {% endif %}
+
+    <span class="text-xs text-gray-500">{{ page }} / {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}&sort={{ sort }}&tier2_min={{ tier2_min or '' }}&tier3_min={{ tier3_min or '' }}&title={{ title }}&company={{ company }}&location={{ location }}&description={{ description }}{% for s in statuses %}&statuses={{ s }}{% endfor %}{% for s in seniority %}&seniority={{ s }}{% endfor %}{% for a in attendance %}&attendance={{ a }}{% endfor %}"
+       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+       hx-get="/jobs"
+       hx-target="#jobs-table"
+       hx-swap="outerHTML"
+       hx-push-url="true">
+      Next &rarr;
+    </a>
+    {% else %}
+    <span class="text-sm text-gray-300">Next &rarr;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>

@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-One-time historical ingestion (backfill mode).
+Backfill ingestion — fetches jobs listed in the past ~month (chips=date_posted:month),
+which is the closest standard Google Jobs filter to the intended 3-week window.
 
 Iterates through every query in queries.yaml, paginating each up to
-BACKFILL_MAX_PAGES.  Progress is tracked in data/backfill_state.json so
-the process can resume if interrupted — completed queries are skipped.
+BACKFILL_MAX_PAGES.
 
 Usage:
     python scripts/backfill.py
     python scripts/backfill.py --dry-run        # fetch only, no DB writes
-    python scripts/backfill.py --reset-state    # clear progress and start over
     python scripts/backfill.py --query "Data Scientist - Seattle"  # single query
 """
 from __future__ import annotations
@@ -34,7 +33,7 @@ logger = logging.getLogger("backfill")
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Backfill historical job listings.")
+    p = argparse.ArgumentParser(description="Backfill historical job listings from prior 3 weeks.")
     p.add_argument("--dry-run",     action="store_true", help="Fetch jobs but skip DB writes")
     p.add_argument("--query",       metavar="NAME",      help="Run a single named query only")
     return p.parse_args()

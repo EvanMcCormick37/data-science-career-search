@@ -13,6 +13,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 DATA_DIR   = ROOT_DIR / "data"
+RESUMES_DIR = DATA_DIR / "resumes"
 DB_DIR     = ROOT_DIR / "db"
 CONFIG_DIR = ROOT_DIR / "config"
 MODELS_DIR = ROOT_DIR / "models"

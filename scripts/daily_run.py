@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Daily ingestion pipeline entry point.
+Daily ingestion pipeline entry point — fetches jobs posted in the past 24 hours
+(chips=date_posted:today) across all queries in queries.yaml.
 
 Intended to be called by cron or a task scheduler once per day.
 
 Steps:
   1. Mark jobs older than JOB_EXPIRY_DAYS as expired.
-  2. Fetch new listings (first DAILY_MAX_PAGES pages per query).
+  2. Fetch new listings (first DAILY_MAX_PAGES pages per query, today only).
   3. Run full ingestion pipeline on fetched jobs.
   4. Log a summary.
 

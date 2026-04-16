@@ -2,9 +2,15 @@
 SerpAPI Google Jobs fetcher.
 
 Two modes:
-  daily    — fetches DAILY_MAX_PAGES pages per query (new listings only)
-  backfill — paginates up to BACKFILL_MAX_PAGES, persisting progress to a
-             state file so interrupted runs resume where they left off
+  daily    — fetches DAILY_MAX_PAGES pages per query, filtered to the past
+             24 hours via chips=date_posted:today
+  backfill — paginates up to BACKFILL_MAX_PAGES, filtered to the past ~month
+             via chips=date_posted:month (the closest standard chip to 3 weeks;
+             Google Jobs does not expose a 3-week filter)
+
+The date chip is injected automatically from the mode.  A query dict entry
+with a "chips" key overrides it, allowing per-query customisation from
+queries.yaml.
 
 Yields raw job dicts from SerpAPI's `jobs_results` array.  Each dict gets a
 `serp_api_json` key added containing the full page response so downstream code
@@ -32,6 +38,14 @@ logger = logging.getLogger(__name__)
 
 Mode = Literal["daily", "backfill"]
 
+# Date-recency chips injected automatically per mode.
+# Google Jobs only exposes fixed intervals; "month" is the closest to 3 weeks.
+# Override per query in queries.yaml by setting a "chips" key.
+_DATE_CHIPS: dict[str, str] = {
+    "daily":    "date_posted:today",
+    "backfill": "date_posted:month",
+}
+
 
 def load_queries() -> list[dict]:
     """Load and merge query definitions from queries.yaml."""
@@ -43,7 +57,7 @@ def load_queries() -> list[dict]:
 def _make_params(query: dict) -> dict:
     """Build the SerpAPI params dict from a query entry."""
     params: dict = {"engine": "google_jobs", "api_key": SERPAPI_KEY}
-    for key in ("q", "location", "gl", "hl", "lrad", "uds"):
+    for key in ("q", "location", "gl", "hl", "lrad", "uds", "chips"):
         if query.get(key) is not None:
             params[key] = query[key]
     return params
@@ -76,6 +90,11 @@ def fetch_jobs(
         logger.info(f"[{mode}] Fetching query: {name!r}")
 
         params = _make_params(query)
+        # Inject the date chip when the query dict doesn't already supply one.
+        if "chips" not in params and mode in _DATE_CHIPS:
+            params["chips"] = _DATE_CHIPS[mode]
+            logger.debug(f"  Date filter: chips={params['chips']!r}")
+
         for page in range(max_pages):
             try:
                 response = GoogleSearch(params).get_dict()

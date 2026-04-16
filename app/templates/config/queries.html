@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<div
+  class="max-w-4xl mx-auto py-8 px-4"
+  x-data="{
+    queries: {{ queries | tojson }},
+    get json() { return JSON.stringify(this.queries); },
+    addRow() {
+      this.queries.push({ name: '', q: '', location: '', gl: 'us', hl: 'en', lrad: '' });
+    },
+    removeRow(i) {
+      this.queries.splice(i, 1);
+    }
+  }"
+>
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-xl font-bold text-gray-800">Search Queries</h1>
+      <p class="text-sm text-gray-500 mt-0.5">
+        <a href="/config" class="text-blue-600 hover:underline">&larr; Config</a>
+      </p>
+    </div>
+  </div>
+
+  <form method="POST" action="/config/queries" @submit.prevent="
+    document.getElementById('queries_json_input').value = json;
+    $el.submit();
+  ">
+    <input type="hidden" id="queries_json_input" name="queries_json" />
+
+    <!-- Table -->
+    <div class="border border-gray-200 rounded-xl overflow-hidden bg-white mb-4">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="text-left px-3 py-2 font-medium text-gray-600">Name</th>
+            <th class="text-left px-3 py-2 font-medium text-gray-600">Query (q)</th>
+            <th class="text-left px-3 py-2 font-medium text-gray-600">Location</th>
+            <th class="text-left px-3 py-2 font-medium text-gray-600">gl</th>
+            <th class="text-left px-3 py-2 font-medium text-gray-600">hl</th>
+            <th class="text-left px-3 py-2 font-medium text-gray-600">lrad</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="(query, i) in queries" :key="i">
+            <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+              <td class="px-2 py-1.5">
+                <input type="text" x-model="query.name"
+                       class="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-blue-400" />
+              </td>
+              <td class="px-2 py-1.5">
+                <input type="text" x-model="query.q"
+                       class="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-blue-400" />
+              </td>
+              <td class="px-2 py-1.5">
+                <input type="text" x-model="query.location"
+                       class="w-full text-sm border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-blue-400" />
+              </td>
+              <td class="px-2 py-1.5">
+                <input type="text" x-model="query.gl" maxlength="5"
+                       class="w-16 text-sm border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-blue-400" />
+              </td>
+              <td class="px-2 py-1.5">
+                <input type="text" x-model="query.hl" maxlength="5"
+                       class="w-16 text-sm border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-blue-400" />
+              </td>
+              <td class="px-2 py-1.5">
+                <input type="text" x-model="query.lrad"
+                       class="w-20 text-sm border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-blue-400" />
+              </td>
+              <td class="px-2 py-1.5 text-right">
+                <button type="button" @click="removeRow(i)"
+                        class="text-red-400 hover:text-red-600 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors">
+                  Remove
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <button
+        type="button"
+        @click="addRow()"
+        class="text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 px-3 py-1.5 rounded hover:bg-blue-50 transition-colors"
+      >
+        + Add Query
+      </button>
+      <button
+        type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2 rounded transition-colors"
+      >
+        Save
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

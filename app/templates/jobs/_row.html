@@ -1,0 +1,81 @@
+<tr
+  id="job-row-{{ job.job_id }}"
+  class="cursor-pointer hover:bg-blue-50 border-b border-gray-100 transition-colors"
+  hx-get="/jobs/{{ job.job_id }}/detail"
+  hx-target="#detail-panel"
+  hx-swap="innerHTML"
+  hx-on::after-request="window.dispatchEvent(new CustomEvent('panel-open'))"
+>
+  <td class="px-3 py-2 max-w-[14rem] truncate font-medium" title="{{ job.title }}">{{ job.title }}</td>
+  <td class="px-3 py-2 max-w-[10rem] truncate text-gray-700" title="{{ job.company_name }}">{{ job.company_name }}</td>
+  <td class="px-3 py-2 max-w-[8rem] truncate text-gray-500 text-xs" title="{{ job.location or '' }}">{{ job.location or '—' }}</td>
+  <td class="px-3 py-2 text-xs text-gray-500">{{ job.attendance or '—' }}</td>
+  <td class="px-3 py-2 text-xs text-gray-500">{{ job.seniority or '—' }}</td>
+  <td class="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">
+    {% if job.salary_min or job.salary_max %}
+      {% if job.salary_min and job.salary_max %}
+        ${{ (job.salary_min // 1000) }}k–${{ (job.salary_max // 1000) }}k
+      {% elif job.salary_max %}
+        up to ${{ (job.salary_max // 1000) }}k
+      {% else %}
+        from ${{ (job.salary_min // 1000) }}k
+      {% endif %}
+    {% else %}—{% endif %}
+  </td>
+  <td class="px-3 py-2">
+    {% if job.tier2_score is not none %}
+      {% if job.tier2_score >= 75 %}
+        <span class="score-badge bg-green-100 text-green-800">{{ job.tier2_score | int }}</span>
+      {% elif job.tier2_score >= 50 %}
+        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier2_score | int }}</span>
+      {% else %}
+        <span class="score-badge bg-red-100 text-red-800">{{ job.tier2_score | int }}</span>
+      {% endif %}
+    {% else %}
+      <span class="score-badge bg-gray-100 text-gray-500">—</span>
+    {% endif %}
+  </td>
+  <td class="px-3 py-2">
+    {% if job.tier3_score is not none %}
+      {% if job.tier3_score >= 75 %}
+        <span class="score-badge bg-green-100 text-green-800">{{ job.tier3_score | int }}</span>
+      {% elif job.tier3_score >= 50 %}
+        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier3_score | int }}</span>
+      {% else %}
+        <span class="score-badge bg-red-100 text-red-800">{{ job.tier3_score | int }}</span>
+      {% endif %}
+    {% else %}
+      <span class="score-badge bg-gray-100 text-gray-400">—</span>
+    {% endif %}
+  </td>
+  <td class="px-3 py-2">
+    {% if job.status == 'active' %}
+      <span class="score-badge bg-green-100 text-green-700">active</span>
+    {% elif job.status == 'expired' %}
+      <span class="score-badge bg-gray-100 text-gray-600">expired</span>
+    {% elif job.status == 'closed' %}
+      <span class="score-badge bg-red-100 text-red-700">closed</span>
+    {% else %}
+      <span class="score-badge bg-gray-100 text-gray-500">{{ job.status }}</span>
+    {% endif %}
+  </td>
+  <td class="px-3 py-2 text-xs">
+    {% if job.application_id %}
+      {% if job.application_state == 'submitted' %}
+        <span class="score-badge bg-blue-100 text-blue-700">submitted</span>
+      {% elif job.application_state == 'interviewing' %}
+        <span class="score-badge bg-purple-100 text-purple-700">interview</span>
+      {% elif job.application_state == 'offer' %}
+        <span class="score-badge bg-green-100 text-green-700">offer</span>
+      {% elif job.application_state == 'rejected' %}
+        <span class="score-badge bg-red-100 text-red-700">rejected</span>
+      {% elif job.application_state == 'withdrawn' %}
+        <span class="score-badge bg-gray-100 text-gray-600">withdrawn</span>
+      {% else %}
+        <span class="score-badge bg-blue-100 text-blue-700">applied</span>
+      {% endif %}
+    {% else %}
+      <span class="text-gray-400">—</span>
+    {% endif %}
+  </td>
+</tr>

@@ -474,3 +474,417 @@ def get_all_applications() -> list[dict]:
                 """
             )
             return [dict(row) for row in cur.fetchall()]
+
+
+# ── Dashboard reads/writes ────────────────────────────────────────────────
+
+from datetime import datetime, timezone  # noqa: E402 — may duplicate top-level import
+
+
+def _ago(dt: datetime | None) -> str:
+    """Convert a datetime to a human-readable 'Xm ago' / 'Xh ago' / 'Xd ago' string."""
+    if dt is None:
+        return "never"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    now = datetime.now(tz=timezone.utc)
+    delta = now - dt
+    total_seconds = int(delta.total_seconds())
+    if total_seconds < 3600:
+        return f"{max(total_seconds // 60, 1)}m ago"
+    if total_seconds < 86400:
+        return f"{total_seconds // 3600}h ago"
+    return f"{total_seconds // 86400}d ago"
+
+
+def get_freshness_stats() -> dict:
+    """
+    Return a single-query summary of pipeline freshness for the dashboard nav.
+    Keys: last_ingested, last_ingested_ago, ingested_today, active_total, awaiting_tier3.
+    """
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    MAX(date_ingested) AS last_ingested,
+                    COUNT(*) FILTER (WHERE date_ingested > NOW() - INTERVAL '24 hours') AS ingested_today,
+                    COUNT(*) FILTER (WHERE status = 'active') AS active_total,
+                    COUNT(*) FILTER (WHERE status = 'active' AND tier3_score IS NULL AND tier2_score IS NOT NULL) AS awaiting_tier3
+                FROM jobs
+                """
+            )
+            row = dict(cur.fetchone())
+    last_ingested = row.get("last_ingested")
+    row["last_ingested_ago"] = _ago(last_ingested)
+    return row
+
+
+_VALID_JOB_SORTS = {
+    "tier2_score": "j.tier2_score DESC NULLS LAST",
+    "tier3_score": "j.tier3_score DESC NULLS LAST",
+    "date_listed":  "j.date_listed DESC NULLS LAST",
+    "salary_max":   "j.salary_max DESC NULLS LAST",
+}
+
+
+def list_jobs(
+    *,
+    statuses: list[str] | None = None,
+    tier2_min: float | None = None,
+    tier3_min: float | None = None,
+    seniority: list[str] | None = None,
+    attendance: list[str] | None = None,
+    location: str | None = None,
+    title: str | None = None,
+    company: str | None = None,
+    description: str | None = None,
+    has_application: bool | None = None,
+    sort: str = "tier2_score",
+    page: int = 1,
+    page_size: int = 50,
+) -> tuple[list[dict], int]:
+    """
+    Dynamically filtered/sorted job listing with pagination.
+    Returns (rows, total_count).
+    """
+    conditions: list[str] = []
+    params: list = []
+
+    # Status filter — default to active only; always exclude extraction_failed and duplicate
+    if statuses:
+        safe_statuses = [s for s in statuses if s not in ("extraction_failed", "duplicate")]
+    else:
+        safe_statuses = ["active"]
+    placeholders = ", ".join(["%s"] * len(safe_statuses))
+    conditions.append(f"j.status IN ({placeholders})")
+    params.extend(safe_statuses)
+
+    if tier2_min is not None:
+        conditions.append("j.tier2_score >= %s")
+        params.append(tier2_min)
+    if tier3_min is not None:
+        conditions.append("j.tier3_score >= %s")
+        params.append(tier3_min)
+    if seniority:
+        placeholders = ", ".join(["%s"] * len(seniority))
+        conditions.append(f"j.seniority IN ({placeholders})")
+        params.extend(seniority)
+    if attendance:
+        placeholders = ", ".join(["%s"] * len(attendance))
+        conditions.append(f"j.attendance IN ({placeholders})")
+        params.extend(attendance)
+    if location:
+        conditions.append("j.location ILIKE %s")
+        params.append(f"%{location}%")
+    if title:
+        conditions.append("j.title ILIKE %s")
+        params.append(f"%{title}%")
+    if company:
+        conditions.append("j.company_name ILIKE %s")
+        params.append(f"%{company}%")
+    if description:
+        conditions.append("(j.description ILIKE %s OR j.qualifications ILIKE %s OR j.responsibilities ILIKE %s)")
+        params.extend([f"%{description}%", f"%{description}%", f"%{description}%"])
+    if has_application is True:
+        conditions.append("j.application_id IS NOT NULL")
+    elif has_application is False:
+        conditions.append("j.application_id IS NULL")
+
+    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+    order_clause = _VALID_JOB_SORTS.get(sort, _VALID_JOB_SORTS["tier2_score"])
+    offset = (page - 1) * page_size
+
+    select_sql = f"""
+        SELECT
+            j.job_id, j.title, j.company_name, j.location, j.attendance, j.seniority,
+            j.employment_type, j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
+            j.date_listed, j.status, j.url,
+            j.tier2_score, j.tier2_explanation, j.tier3_score,
+            j.application_id, a.state AS application_state
+        FROM jobs j
+        LEFT JOIN applications a ON j.application_id = a.application_id
+        {where_clause}
+        ORDER BY {order_clause}
+        LIMIT %s OFFSET %s
+    """
+    count_sql = f"""
+        SELECT COUNT(*) FROM jobs j
+        LEFT JOIN applications a ON j.application_id = a.application_id
+        {where_clause}
+    """
+
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(count_sql, params)
+            total_count: int = cur.fetchone()[0]
+            cur.execute(select_sql, params + [page_size, offset])
+            rows = [dict(row) for row in cur.fetchall()]
+
+    return rows, total_count
+
+
+def get_job_detail(job_id: int) -> dict | None:
+    """
+    Return full job detail including application fields, skills, and frameworks.
+    Returns None if job not found.
+    """
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # 1. Main job record + application fields
+            cur.execute(
+                """
+                SELECT
+                    j.job_id, j.title, j.company_name, j.location, j.attendance, j.seniority,
+                    j.employment_type, j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
+                    j.description, j.qualifications, j.responsibilities,
+                    j.date_listed, j.date_ingested, j.status, j.url,
+                    j.tier2_score, j.tier2_explanation, j.tier3_score, j.tier3_explanation,
+                    j.application_id,
+                    a.state AS application_state,
+                    a.date_applied, a.assistance_level, a.cover_letter, a.resume,
+                    a.cold_calls, a.reached_human, a.interviews, a.offer
+                FROM jobs j
+                LEFT JOIN applications a ON j.application_id = a.application_id
+                WHERE j.job_id = %s
+                """,
+                (job_id,),
+            )
+            row = cur.fetchone()
+            if row is None:
+                return None
+            result = dict(row)
+
+            # 2. Skills (non-candidate)
+            cur.execute(
+                """
+                SELECT s.name
+                FROM job_skills js
+                JOIN skills s ON js.skill_id = s.skill_id
+                WHERE js.job_id = %s AND s.is_candidate = 0
+                ORDER BY s.name
+                """,
+                (job_id,),
+            )
+            result["skills"] = [r["name"] for r in cur.fetchall()]
+
+            # 3. Frameworks (non-candidate)
+            cur.execute(
+                """
+                SELECT f.name
+                FROM job_frameworks jf
+                JOIN frameworks f ON jf.framework_id = f.framework_id
+                WHERE jf.job_id = %s AND f.is_candidate = 0
+                ORDER BY f.name
+                """,
+                (job_id,),
+            )
+            result["frameworks"] = [r["name"] for r in cur.fetchall()]
+
+    return result
+
+
+_VALID_APP_SORTS = {
+    "date_applied": "a.date_applied DESC NULLS LAST",
+    "state":        "a.state ASC",
+    "company_name": "j.company_name ASC",
+}
+
+
+def list_applications(
+    *,
+    states: list[str] | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    company: str | None = None,
+    assistance_level: list[str] | None = None,
+    has_offer: bool | None = None,
+    sort: str = "date_applied",
+    page: int = 1,
+    page_size: int = 50,
+) -> tuple[list[dict], int]:
+    """
+    Dynamically filtered/sorted application listing with pagination.
+    Returns (rows, total_count).
+    """
+    conditions: list[str] = []
+    params: list = []
+
+    if states:
+        placeholders = ", ".join(["%s"] * len(states))
+        conditions.append(f"a.state IN ({placeholders})")
+        params.extend(states)
+    if date_from:
+        conditions.append("a.date_applied >= %s")
+        params.append(date_from)
+    if date_to:
+        conditions.append("a.date_applied <= %s")
+        params.append(date_to)
+    if company:
+        conditions.append("j.company_name ILIKE %s")
+        params.append(f"%{company}%")
+    if assistance_level:
+        placeholders = ", ".join(["%s"] * len(assistance_level))
+        conditions.append(f"a.assistance_level IN ({placeholders})")
+        params.extend(assistance_level)
+    if has_offer is True:
+        conditions.append("a.offer = 1")
+    elif has_offer is False:
+        conditions.append("a.offer = 0")
+
+    where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+    order_clause = _VALID_APP_SORTS.get(sort, _VALID_APP_SORTS["date_applied"])
+    offset = (page - 1) * page_size
+
+    select_sql = f"""
+        SELECT
+            a.application_id, a.job_id, a.date_applied, a.state, a.assistance_level,
+            a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer,
+            j.title AS job_title, j.company_name, j.tier2_score, j.tier3_score
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.job_id
+        {where_clause}
+        ORDER BY {order_clause}
+        LIMIT %s OFFSET %s
+    """
+    count_sql = f"""
+        SELECT COUNT(*) FROM applications a
+        JOIN jobs j ON a.job_id = j.job_id
+        {where_clause}
+    """
+
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(count_sql, params)
+            total_count: int = cur.fetchone()[0]
+            cur.execute(select_sql, params + [page_size, offset])
+            rows = [dict(row) for row in cur.fetchall()]
+
+    return rows, total_count
+
+
+def get_application_detail(application_id: int) -> dict | None:
+    """
+    Return full application detail joined with job fields.
+    Returns None if not found.
+    """
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    a.application_id, a.job_id, a.date_applied, a.state, a.assistance_level,
+                    a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer,
+                    j.title AS job_title, j.company_name, j.location,
+                    j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
+                    j.tier2_score, j.tier3_score, j.url AS job_url, j.status AS job_status
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.job_id
+                WHERE a.application_id = %s
+                """,
+                (application_id,),
+            )
+            row = cur.fetchone()
+    return dict(row) if row else None
+
+
+_VALID_JOB_STATUSES = frozenset({"active", "expired", "closed"})
+
+
+def update_job_status(job_id: int, status: str) -> None:
+    """Update a job's status. Raises ValueError if status is not in the allowed set."""
+    if status not in _VALID_JOB_STATUSES:
+        raise ValueError(f"Invalid job status {status!r}. Must be one of {_VALID_JOB_STATUSES}.")
+    with connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE jobs SET status = %s, date_updated = NOW() WHERE job_id = %s",
+                (status, job_id),
+            )
+
+
+def create_application(  # type: ignore[override]  # shadows module-level function with dashboard signature
+    *,
+    job_id: int,
+    date_applied: str | None = None,
+    state: str = "submitted",
+    assistance_level: str | None = None,
+    cover_letter: str | None = None,
+    resume: str | None = None,
+    cold_calls: int = 0,
+    reached_human: int = 0,
+    interviews: int = 0,
+    offer: int = 0,
+) -> int:
+    """
+    Dashboard version of create_application — includes the new 'state' column.
+    INSERT into applications, set jobs.application_id back-pointer.
+    Returns the new application_id.
+    """
+    if assistance_level is not None and assistance_level not in _ASSISTANCE_LEVELS:
+        raise ValueError(
+            f"assistance_level must be one of {_ASSISTANCE_LEVELS}, got {assistance_level!r}"
+        )
+
+    with connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO applications (
+                    job_id, date_applied, state, assistance_level,
+                    cover_letter, resume,
+                    cold_calls, reached_human, interviews, offer
+                ) VALUES (
+                    %(job_id)s, %(date_applied)s, %(state)s, %(assistance_level)s,
+                    %(cover_letter)s, %(resume)s,
+                    %(cold_calls)s, %(reached_human)s, %(interviews)s, %(offer)s
+                )
+                RETURNING application_id
+                """,
+                {
+                    "job_id":           job_id,
+                    "date_applied":     date_applied,
+                    "state":            state,
+                    "assistance_level": assistance_level,
+                    "cover_letter":     cover_letter,
+                    "resume":           resume,
+                    "cold_calls":       cold_calls,
+                    "reached_human":    reached_human,
+                    "interviews":       interviews,
+                    "offer":            offer,
+                },
+            )
+            application_id: int = cur.fetchone()[0]
+            cur.execute(
+                "UPDATE jobs SET application_id = %s WHERE job_id = %s",
+                (application_id, job_id),
+            )
+
+    logger.debug(f"Dashboard created application_id={application_id} for job_id={job_id}")
+    return application_id
+
+
+def update_application(application_id: int, **fields) -> None:  # type: ignore[override]
+    """
+    Dashboard version of update_application — includes the new 'state' column.
+    Filters fields against allowlist. If state=='offer', also sets offer=1 in lockstep.
+    """
+    _UPDATABLE = frozenset({
+        "date_applied", "state", "assistance_level", "cover_letter", "resume",
+        "cold_calls", "reached_human", "interviews", "offer",
+    })
+    filtered = {k: v for k, v in fields.items() if k in _UPDATABLE}
+    if not filtered:
+        return
+
+    # Keep offer in sync with state
+    if filtered.get("state") == "offer":
+        filtered["offer"] = 1
+
+    set_clause = ", ".join(f"{col} = %({col})s" for col in filtered)
+    with connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE applications SET {set_clause} WHERE application_id = %(application_id)s",
+                {**filtered, "application_id": application_id},
+            )

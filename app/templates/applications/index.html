@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-[calc(100vh-3.5rem)]" x-data="{ panelOpen: false }" @panel-open.window="panelOpen = true">
+
+  <!-- ── Filter Sidebar ────────────────────────────────────── -->
+  <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4 flex flex-col gap-4">
+    <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Filters</h2>
+
+    <form
+      id="filter-form"
+      hx-get="/applications"
+      hx-trigger="change, keyup changed delay:400ms from:input[type=text]"
+      hx-target="#applications-table"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+      class="flex flex-col gap-4"
+    >
+      <!-- Sort -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Sort by</label>
+        <select name="sort" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
+          <option value="date_applied"  {% if sort == 'date_applied'  %}selected{% endif %}>Date Applied</option>
+          <option value="state"         {% if sort == 'state'         %}selected{% endif %}>State</option>
+          <option value="company_name"  {% if sort == 'company_name'  %}selected{% endif %}>Company</option>
+        </select>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Company</label>
+        <input type="text" name="company" value="{{ company }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
+      </div>
+
+      <!-- Date range -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Date from</label>
+        <input type="date" name="date_from" value="{{ date_from }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Date to</label>
+        <input type="date" name="date_to" value="{{ date_to }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
+      </div>
+
+      <!-- State -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">State</label>
+        {% for st in ['submitted', 'interviewing', 'offer', 'rejected', 'withdrawn'] %}
+        <label class="flex items-center gap-1 text-sm text-gray-700 mb-0.5">
+          <input type="checkbox" name="states" value="{{ st }}"
+                 {% if st in states %}checked{% endif %} />
+          {{ st|capitalize }}
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- Assistance level -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Assistance</label>
+        {% for al in ['ai', 'assisted', 'human'] %}
+        <label class="flex items-center gap-1 text-sm text-gray-700 mb-0.5">
+          <input type="checkbox" name="assistance_level" value="{{ al }}"
+                 {% if al in assistance_level %}checked{% endif %} />
+          {{ al|capitalize }}
+        </label>
+        {% endfor %}
+      </div>
+
+      <!-- Has offer -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Offer received</label>
+        <select name="has_offer" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
+          <option value=""    {% if has_offer == ''    %}selected{% endif %}>Any</option>
+          <option value="yes" {% if has_offer == 'yes' %}selected{% endif %}>Yes</option>
+          <option value="no"  {% if has_offer == 'no'  %}selected{% endif %}>No</option>
+        </select>
+      </div>
+    </form>
+  </aside>
+
+  <!-- ── Applications Table ─────────────────────────────────── -->
+  <main class="flex-1 overflow-auto">
+    {% include "applications/_table.html" %}
+  </main>
+
+  <!-- ── Detail Panel ───────────────────────────────────────── -->
+  <div
+    x-show="panelOpen"
+    x-cloak
+    class="w-96 flex-shrink-0 bg-white border-l border-gray-200 overflow-y-auto flex flex-col"
+  >
+    <div class="flex items-center justify-between p-3 border-b border-gray-200 sticky top-0 bg-white z-10">
+      <span class="text-sm font-semibold text-gray-700">Application Detail</span>
+      <button
+        @click="panelOpen = false"
+        class="text-gray-400 hover:text-gray-600 text-xl leading-none"
+        aria-label="Close panel"
+      >&times;</button>
+    </div>
+    <div id="detail-panel" class="flex-1 overflow-y-auto"></div>
+  </div>
+
+</div>
+{% endblock %}

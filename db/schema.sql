@@ -153,3 +153,24 @@ CREATE INDEX IF NOT EXISTS idx_skill_aliases_skill
 
 CREATE INDEX IF NOT EXISTS idx_framework_aliases_framework
     ON framework_aliases (framework_id);
+
+-- ============================================================
+-- DASHBOARD SCHEMA ADDITIONS
+-- ============================================================
+
+-- Application progress tracking (separate from jobs.status)
+ALTER TABLE applications
+    ADD COLUMN IF NOT EXISTS state TEXT
+    CHECK (state IN ('submitted', 'rejected', 'interviewing', 'offer', 'withdrawn'));
+
+-- Backfill: existing applications with offer=1 → 'offer', else → 'submitted'
+DO $$ BEGIN
+    UPDATE applications SET state = 'offer'     WHERE offer = 1 AND state IS NULL;
+    UPDATE applications SET state = 'submitted' WHERE state IS NULL;
+END $$;
+
+-- Dashboard-optimized indexes
+CREATE INDEX IF NOT EXISTS idx_jobs_tier2_score
+    ON jobs (tier2_score DESC NULLS LAST) WHERE tier2_score IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_applications_state
+    ON applications (state);

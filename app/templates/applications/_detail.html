@@ -1,0 +1,157 @@
+<div class="p-4 flex flex-col gap-4 text-sm">
+
+  <!-- Linked job info -->
+  <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
+    <p class="font-bold text-gray-800">{{ app.job_title }}</p>
+    <p class="text-gray-600 text-xs">{{ app.company_name }}</p>
+    {% if app.job_url %}
+    <a href="{{ app.job_url }}" target="_blank" rel="noopener noreferrer"
+       class="text-blue-600 hover:text-blue-800 underline text-xs">View Job &rarr;</a>
+    {% endif %}
+    <div class="flex gap-2 mt-2">
+      {% if app.tier2_score is not none %}
+      <span class="text-xs text-gray-500">T2: <strong>{{ app.tier2_score | int }}</strong></span>
+      {% endif %}
+      {% if app.tier3_score is not none %}
+      <span class="text-xs text-gray-500">T3: <strong>{{ app.tier3_score | int }}</strong></span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Editable fields -->
+  <form class="flex flex-col gap-3">
+
+    <!-- Date Applied -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Date Applied</label>
+      <input
+        type="date"
+        name="date_applied"
+        value="{{ app.date_applied or '' }}"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      />
+    </div>
+
+    <!-- State -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">State</label>
+      <select
+        name="state"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      >
+        <option value="submitted"    {% if app.state == 'submitted'    %}selected{% endif %}>Submitted</option>
+        <option value="interviewing" {% if app.state == 'interviewing' %}selected{% endif %}>Interviewing</option>
+        <option value="offer"        {% if app.state == 'offer'        %}selected{% endif %}>Offer</option>
+        <option value="rejected"     {% if app.state == 'rejected'     %}selected{% endif %}>Rejected</option>
+        <option value="withdrawn"    {% if app.state == 'withdrawn'    %}selected{% endif %}>Withdrawn</option>
+      </select>
+    </div>
+
+    <!-- Assistance level -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Assistance Level</label>
+      <select
+        name="assistance_level"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      >
+        <option value="">— select —</option>
+        <option value="ai"       {% if app.assistance_level == 'ai'       %}selected{% endif %}>AI-written</option>
+        <option value="assisted" {% if app.assistance_level == 'assisted' %}selected{% endif %}>AI-assisted</option>
+        <option value="human"    {% if app.assistance_level == 'human'    %}selected{% endif %}>Human</option>
+      </select>
+    </div>
+
+    <!-- Resume -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Resume</label>
+      <select
+        name="resume"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      >
+        <option value="">— none —</option>
+        {% for r in resumes %}
+        <option value="{{ r }}" {% if app.resume == r %}selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Cold calls -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Cold Calls</label>
+      <input
+        type="number"
+        name="cold_calls"
+        min="0"
+        value="{{ app.cold_calls or 0 }}"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      />
+    </div>
+
+    <!-- Interviews -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Interview Rounds</label>
+      <input
+        type="number"
+        name="interviews"
+        min="0"
+        value="{{ app.interviews or 0 }}"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      />
+    </div>
+
+    <!-- Reached human -->
+    <div class="flex items-center gap-2">
+      <input
+        type="checkbox"
+        name="reached_human"
+        value="1"
+        {% if app.reached_human %}checked{% endif %}
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="rounded"
+        id="reached_human_{{ app.application_id }}"
+      />
+      <label for="reached_human_{{ app.application_id }}" class="text-sm text-gray-700">Reached a human</label>
+    </div>
+
+    <!-- Offer -->
+    <div class="flex items-center gap-2">
+      <input
+        type="checkbox"
+        name="offer"
+        value="1"
+        {% if app.offer %}checked{% endif %}
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="change"
+        class="rounded"
+        id="offer_{{ app.application_id }}"
+      />
+      <label for="offer_{{ app.application_id }}" class="text-sm text-gray-700">Offer received</label>
+    </div>
+
+    <!-- Cover letter -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Cover Letter</label>
+      <textarea
+        name="cover_letter"
+        rows="6"
+        hx-patch="/applications/{{ app.application_id }}"
+        hx-trigger="blur"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1 font-mono resize-y"
+      >{{ app.cover_letter or '' }}</textarea>
+    </div>
+
+  </form>
+</div>

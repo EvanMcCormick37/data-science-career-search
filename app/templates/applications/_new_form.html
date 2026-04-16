@@ -1,0 +1,83 @@
+<div class="p-4 flex flex-col gap-4 text-sm">
+
+  <h2 class="text-base font-bold text-gray-800">Log Application</h2>
+
+  <!-- Job context -->
+  <div class="border border-blue-100 rounded-lg p-3 bg-blue-50">
+    <p class="font-semibold text-gray-800">{{ job.title }}</p>
+    <p class="text-gray-600 text-xs">{{ job.company_name }}</p>
+  </div>
+
+  <form
+    hx-post="/applications"
+    hx-push-url="true"
+    class="flex flex-col gap-3"
+  >
+    <input type="hidden" name="job_id" value="{{ job.job_id }}" />
+
+    <!-- Date Applied -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Date Applied <span class="text-red-500">*</span></label>
+      <input
+        type="date"
+        name="date_applied"
+        required
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      />
+    </div>
+
+    <!-- State -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Initial State</label>
+      <select name="state" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
+        <option value="submitted" selected>Submitted</option>
+        <option value="interviewing">Interviewing</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+        <option value="withdrawn">Withdrawn</option>
+      </select>
+    </div>
+
+    <!-- Assistance level -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Assistance Level <span class="text-red-500">*</span></label>
+      <select name="assistance_level" required class="w-full text-sm border border-gray-300 rounded px-2 py-1">
+        <option value="">— select —</option>
+        <option value="ai">AI-written</option>
+        <option value="assisted">AI-assisted</option>
+        <option value="human">Human</option>
+      </select>
+    </div>
+
+    <!-- Resume -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Resume <span class="text-red-500">*</span></label>
+      <select name="resume" required class="w-full text-sm border border-gray-300 rounded px-2 py-1">
+        <option value="">— select resume —</option>
+        {% for r in resumes %}
+        <option value="{{ r }}">{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Cover letter -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Cover Letter</label>
+      <textarea
+        name="cover_letter"
+        rows="6"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1 font-mono resize-y"
+        placeholder="Paste cover letter text here..."
+      ></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-1">
+      <button
+        type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition-colors"
+      >
+        Submit Application
+      </button>
+    </div>
+  </form>
+</div>
