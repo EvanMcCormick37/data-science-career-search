@@ -1,30 +1,19 @@
 """
-Tier 3 — Deep career_profile-fit analysis via Claude (or any capable model).
+Tier 3 — Deep career_profile-fit analysis via an expensive model (OpenRouter).
 
-Takes the top Tier 2 candidates and produces a detailed per-job report:
-  - fit_score      (0–100)
-  - strengths      (where the career_profile aligns well)
-  - gaps           (where the career_profile falls short)
-  - recommendation (apply / apply_with_caveats / skip)
-  - career_profile_tips    (targeted tweaks for this specific role)
-
-Model routing:
-  If ANTHROPIC_API_KEY is set, calls the Anthropic API directly.
-  Otherwise routes through OpenRouter using DEEP_ANALYSIS_MODEL.
+Takes the top candidates (pre-ranked by tier2_score) and produces a per-job
+fit score and explanation via DEEP_ANALYSIS_MODEL.
 
 Results are persisted to jobs.tier3_score and jobs.tier3_explanation.
 """
 from __future__ import annotations
 
-import json
 import logging
 from typing import Sequence
 
-from config.settings import (
-    ANTHROPIC_API_KEY,
-    DEEP_ANALYSIS_MODEL,
-)
+from config.settings import DEEP_ANALYSIS_MODEL
 from db.operations import update_tier3_scores
+from llm.client import complete_json
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +65,6 @@ def _format_user_message(career_profile_text: str, job: dict) -> str:
     )
 
 
-def _call_openrouter(messages: list[dict]) -> str:
-    from llm.client import complete
-    return complete(DEEP_ANALYSIS_MODEL, messages, temperature=0.1, max_tokens=4096)
-
-
 def _analyse_one(job: dict, career_profile_text: str) -> dict:
     """Run deep analysis for a single job. Returns the job dict with analysis added."""
     messages = [
@@ -89,30 +73,15 @@ def _analyse_one(job: dict, career_profile_text: str) -> dict:
     ]
 
     try:
-        raw = _call_openrouter(messages)
-
-        analysis = json.loads(raw)
-    except json.JSONDecodeError as err:
-        logger.error(
-            f"Tier 3 JSON parse failure for {job.get('title')!r} - {err} "
-            f"@ {job.get('company_name')!r}"
+        analysis = complete_json(
+            DEEP_ANALYSIS_MODEL, messages, temperature=0.1, max_tokens=4096
         )
-        analysis = {
-            "fit_score":      0,
-            "strengths":      [],
-            "gaps":           ["Analysis failed — JSON parse error"],
-            "recommendation": "skip",
-            "career_profile_tips":    [],
-        }
     except Exception as exc:
-        logger.error(f"Tier 3 API error for job {job.get('job_id')}: {exc}")
-        analysis = {
-            "fit_score":      0,
-            "strengths":      [],
-            "gaps":           [f"Analysis failed: {exc}"],
-            "recommendation": "skip",
-            "career_profile_tips":    [],
-        }
+        logger.error(
+            f"Tier 3 analysis failed for {job.get('title')!r} "
+            f"@ {job.get('company_name')!r}: {exc}"
+        )
+        analysis = {"fit_score": 0, "explanation": f"Analysis failed: {exc}"}
 
     return {**job, **analysis}
 
@@ -148,16 +117,10 @@ def analyse_batch(
         results.append(enriched)
 
         if persist and job.get("job_id"):
-            explanation = json.dumps({
-                "strengths":      enriched.get("strengths", []),
-                "gaps":           enriched.get("gaps", []),
-                "recommendation": enriched.get("recommendation", ""),
-                "career_profile_tips":    enriched.get("career_profile_tips", []),
-            })
             update_tier3_scores(
                 job["job_id"],
                 enriched.get("fit_score", 0),
-                explanation,
+                enriched.get("explanation", ""),
             )
 
     results.sort(key=lambda j: j.get("fit_score", 0), reverse=True)

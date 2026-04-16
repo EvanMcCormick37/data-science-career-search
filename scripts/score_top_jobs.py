@@ -47,12 +47,16 @@ def parse_args() -> argparse.Namespace:
         help=f"Number of top-scored jobs to analyse (default: {DEEP_ANALYSIS_TOP_K})",
     )
     p.add_argument(
-        "--min-score", "-m", type=int, default=0,
+        "--min-score", "-m", type=int, default=70,
         help="Only consider jobs with a cheap-model score >= this value (default: 0)",
     )
     p.add_argument(
         "--no-persist", action="store_true",
         help="Do not write tier3 scores back to the database",
+    )
+    p.add_argument(
+        "--rescore", action="store_true",
+        help="Re-run analysis on jobs that already have a tier3 score",
     )
     p.add_argument(
         "--output", metavar="FILE",
@@ -122,21 +126,6 @@ def print_results(jobs: list[dict]) -> None:
         if explanation:
             print(f"\n    Analysis:\n    {explanation}")
 
-        if job.get("strengths"):
-            print("\n    STRENGTHS:")
-            for s in job["strengths"]:
-                print(f"      + {s}")
-
-        if job.get("gaps"):
-            print("\n    GAPS:")
-            for g in job["gaps"]:
-                print(f"      - {g}")
-
-        if job.get("career_profile_tips"):
-            print("\n    RESUME TIPS:")
-            for t in job["career_profile_tips"]:
-                print(f"      → {t}")
-
     print(f"\n{'='*70}\n")
 
 
@@ -146,7 +135,11 @@ def main() -> None:
 
     # ── Fetch top-K jobs by cheap-model score ─────────────────────────────
     from db.operations import get_top_scored_jobs
-    jobs = get_top_scored_jobs(top_k=args.top_k, min_score=args.min_score)
+    jobs = get_top_scored_jobs(
+        top_k=args.top_k,
+        min_score=args.min_score,
+        unscored_only=not args.rescore,
+    )
 
     if not jobs:
         logger.error(

@@ -21,6 +21,7 @@ from typing import Sequence
 
 from tqdm import tqdm
 
+from config.settings import TIER3_AUTO_SCORE_MIN
 from db.operations import (
     insert_job,
     mark_job_failed,
@@ -30,7 +31,7 @@ from pipeline.dedup import Deduplicator
 from pipeline.embedder import Embedder
 from pipeline.extractor import Extractor
 from pipeline.normalizer import Normalizer
-from pipeline.scorer import IngestScorer
+from pipeline.scorer import IngestScorer, _load_career_profile
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class Orchestrator:
           failed      — jobs that failed extraction
         """
         stats = {"inserted": 0, "duplicates": 0, "failed": 0}
+        tier3_queue: list[dict] = []   # jobs that qualify for auto tier3 scoring
 
         for raw_job in tqdm(job_dicts, desc="Processing jobs", unit="job"):
             job = _extract_highlights(raw_job)
@@ -139,13 +141,30 @@ class Orchestrator:
 
             # ── 6. Store ──────────────────────────────────────────────────
             try:
-                insert_job(job_record, embedding, skill_ids, framework_ids)
+                job_id = insert_job(job_record, embedding, skill_ids, framework_ids)
                 stats["inserted"] += 1
+                if fit_score is not None and fit_score >= TIER3_AUTO_SCORE_MIN:
+                    tier3_queue.append({**job_record, "job_id": job_id})
             except Exception as exc:
                 logger.error(
                     f"DB insert failed for {job.get('title')!r}: {exc}"
                 )
                 stats["failed"] += 1
+
+        # ── 7. Auto tier3 deep analysis for high-scoring jobs ─────────────
+        if tier3_queue:
+            career_profile = _load_career_profile()
+            if career_profile:
+                from matching.tier3_deep_analysis import analyse_batch
+                logger.info(
+                    f"Auto tier3: scoring {len(tier3_queue)} job(s) "
+                    f"with tier2_score >= {TIER3_AUTO_SCORE_MIN} …"
+                )
+                analyse_batch(tier3_queue, career_profile, persist=True)
+            else:
+                logger.debug(
+                    "Skipping auto tier3 — career profile not available."
+                )
 
         logger.info(
             f"Batch complete — inserted={stats['inserted']}, "

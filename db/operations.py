@@ -131,18 +131,26 @@ def expire_old_jobs(expiry_days: int) -> int:
 
 # ── Job reads ─────────────────────────────────────────────────────────────
 
-def get_top_scored_jobs(top_k: int, min_score: int = 0) -> list[dict]:
+def get_top_scored_jobs(
+    top_k: int,
+    min_score: int = 0,
+    unscored_only: bool = True,
+) -> list[dict]:
     """
     Return the top_k active jobs ordered by cheap-LLM fit score descending.
 
-    Only jobs that have already been scored (tier2_score IS NOT NULL) are
-    included.  Use min_score to filter out clear non-starters before passing
-    to the expensive LLM.
+    Args:
+        top_k:         Maximum number of jobs to return.
+        min_score:     Only include jobs with tier2_score >= this value.
+        unscored_only: When True (default), exclude jobs that already have a
+                       tier3_score so the expensive LLM is not run twice.
+                       Pass False to re-score all qualifying jobs.
     """
+    tier3_filter = "AND tier3_score IS NULL" if unscored_only else ""
     with connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                """
+                f"""
                 SELECT
                     job_id, title, company_name, location,
                     attendance, seniority, employment_type,
@@ -154,6 +162,7 @@ def get_top_scored_jobs(top_k: int, min_score: int = 0) -> list[dict]:
                 WHERE status = 'active'
                   AND tier2_score IS NOT NULL
                   AND tier2_score >= %(min_score)s
+                  {tier3_filter}
                 ORDER BY tier2_score DESC
                 LIMIT %(top_k)s
                 """,

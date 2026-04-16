@@ -138,31 +138,16 @@ def print_tier3(jobs: list[dict]) -> None:
     print(f"TIER 3 — Deep Analysis ({len(jobs)} jobs)")
     print(f"{'='*70}")
     for i, job in enumerate(jobs, 1):
-        score  = job.get("fit_score", 0)
-        rec    = job.get("recommendation", "")
-        rec_label = {"apply": "✓ APPLY", "apply_with_caveats": "~ APPLY w/ CAVEATS", "skip": "✗ SKIP"}.get(rec, rec)
+        score = job.get("fit_score", 0)
         print(f"\n{'─'*70}")
-        print(f"#{i}  {rec_label}  [fit={score}/100]")
+        print(f"#{i}  [fit={score}/100]")
         print(f"    {job.get('title', '?')} @ {job.get('company_name', '?')}")
         if job.get("location"):
             print(f"    {job['location']}  {job.get('attendance', '')}")
         if job.get("url"):
             print(f"    {job['url']}")
-
-        if job.get("strengths"):
-            print("\n    STRENGTHS:")
-            for s in job["strengths"]:
-                print(f"      + {s}")
-
-        if job.get("gaps"):
-            print("\n    GAPS:")
-            for g in job["gaps"]:
-                print(f"      - {g}")
-
-        if job.get("career_profile_tips"):
-            print("\n    RESUME TIPS:")
-            for t in job["career_profile_tips"]:
-                print(f"      → {t}")
+        if job.get("explanation"):
+            print(f"\n    {job['explanation']}")
 
 
 def main() -> None:
