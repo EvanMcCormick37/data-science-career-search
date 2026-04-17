@@ -18,8 +18,10 @@
     </div>
   </div>
 
-  <!-- Editable fields -->
-  <form class="flex flex-col gap-3">
+  <!-- Editable fields — each element sends its own PATCH on change/blur.
+       hx-swap="none" prevents HTMX from attempting a primary swap into the
+       field itself; the OOB row swap from _row.html handles the table update. -->
+  <div class="flex flex-col gap-3">
 
     <!-- Date Applied -->
     <div>
@@ -30,6 +32,7 @@
         value="{{ app.date_applied or '' }}"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1"
       />
     </div>
@@ -41,6 +44,7 @@
         name="state"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1"
       >
         <option value="submitted"    {% if app.state == 'submitted'    %}selected{% endif %}>Submitted</option>
@@ -58,6 +62,7 @@
         name="assistance_level"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1"
       >
         <option value="">— select —</option>
@@ -74,6 +79,7 @@
         name="resume"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1"
       >
         <option value="">— none —</option>
@@ -93,6 +99,7 @@
         value="{{ app.cold_calls or 0 }}"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1"
       />
     </div>
@@ -107,41 +114,42 @@
         value="{{ app.interviews or 0 }}"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1"
       />
     </div>
 
-    <!-- Reached human -->
-    <div class="flex items-center gap-2">
-      <input
-        type="checkbox"
+    <!-- Reached human — select instead of checkbox so 0 is always sent -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Reached a Human</label>
+      <select
         name="reached_human"
-        value="1"
-        {% if app.reached_human %}checked{% endif %}
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
-        class="rounded"
-        id="reached_human_{{ app.application_id }}"
-      />
-      <label for="reached_human_{{ app.application_id }}" class="text-sm text-gray-700">Reached a human</label>
+        hx-swap="none"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      >
+        <option value="0" {% if not app.reached_human %}selected{% endif %}>No</option>
+        <option value="1" {% if app.reached_human     %}selected{% endif %}>Yes</option>
+      </select>
     </div>
 
-    <!-- Offer -->
-    <div class="flex items-center gap-2">
-      <input
-        type="checkbox"
+    <!-- Offer — select instead of checkbox so 0 is always sent -->
+    <div>
+      <label class="block text-xs font-medium text-gray-600 mb-1">Offer Received</label>
+      <select
         name="offer"
-        value="1"
-        {% if app.offer %}checked{% endif %}
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="change"
-        class="rounded"
-        id="offer_{{ app.application_id }}"
-      />
-      <label for="offer_{{ app.application_id }}" class="text-sm text-gray-700">Offer received</label>
+        hx-swap="none"
+        class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+      >
+        <option value="0" {% if not app.offer %}selected{% endif %}>No</option>
+        <option value="1" {% if app.offer     %}selected{% endif %}>Yes</option>
+      </select>
     </div>
 
-    <!-- Cover letter -->
+    <!-- Cover letter — blur trigger to avoid firing on every keystroke -->
     <div>
       <label class="block text-xs font-medium text-gray-600 mb-1">Cover Letter</label>
       <textarea
@@ -149,9 +157,10 @@
         rows="6"
         hx-patch="/applications/{{ app.application_id }}"
         hx-trigger="blur"
+        hx-swap="none"
         class="w-full text-sm border border-gray-300 rounded px-2 py-1 font-mono resize-y"
       >{{ app.cover_letter or '' }}</textarea>
     </div>
 
-  </form>
+  </div>
 </div>

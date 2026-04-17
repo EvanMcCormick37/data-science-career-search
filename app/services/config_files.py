@@ -12,9 +12,12 @@ from config.settings import QUERIES_PATH, RESUME_PATH
 
 
 def read_queries() -> list[dict]:
-    """Load queries.yaml and return the list of query dicts."""
-    with open(QUERIES_PATH, "r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh)
+    """Load queries.yaml and return the list of query dicts. Returns [] if file missing."""
+    try:
+        with open(QUERIES_PATH, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+    except FileNotFoundError:
+        return []
     if isinstance(data, list):
         return data
     return data.get("queries", []) if isinstance(data, dict) else []
