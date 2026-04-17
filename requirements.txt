@@ -1,28 +1,72 @@
-# ── Core ──────────────────────────────────────────────────────────────────
-psycopg2-binary>=2.9.9
-python-dotenv>=1.0.0
-pyyaml>=6.0.1
-
-# ── HTTP / async ──────────────────────────────────────────────────────────
-httpx>=0.27.0
-
-# ── Retry / resilience ────────────────────────────────────────────────────
-tenacity>=8.3.0
-
-# ── SerpAPI ───────────────────────────────────────────────────────────────
-google-search-results>=2.4.2
-
-# ── Fuzzy deduplication ───────────────────────────────────────────────────
-thefuzz>=0.22.1
-python-Levenshtein>=0.25.0     # accelerates thefuzz
-
-# ── Embedding model (local inference) ────────────────────────────────────
-sentence-transformers>=3.0.0
-torch>=2.2.0                   # required by sentence-transformers
-
-# ── CLI progress ──────────────────────────────────────────────────────────
-tqdm>=4.66.0
-
-# ── Testing ───────────────────────────────────────────────────────────────
-pytest>=8.2.0
-pytest-asyncio>=0.23.0
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anthropic==0.95.0
+anyio==4.13.0
+certifi==2026.2.25
+charset-normalizer==3.4.7
+click==8.3.2
+colorama==0.4.6
+-e git+https://github.com/EvanMcCormick37/data-science-career-search.git@e05cd3712d07eab6712bf04ff647e765fe028599#egg=data_science_career_search
+distro==1.9.0
+docstring_parser==0.18.0
+fastapi==0.136.0
+filelock==3.28.0
+fsspec==2026.3.0
+google_search_results==2.4.2
+h11==0.16.0
+hf-xet==1.4.3
+httpcore==1.0.9
+httptools==0.7.1
+httpx==0.28.1
+huggingface_hub==1.10.2
+idna==3.11
+iniconfig==2.3.0
+Jinja2==3.1.6
+jiter==0.14.0
+joblib==1.5.3
+Levenshtein==0.27.3
+markdown-it-py==4.0.0
+MarkupSafe==3.0.3
+mdurl==0.1.2
+mpmath==1.3.0
+networkx==3.6.1
+numpy==2.4.4
+packaging==26.1
+pluggy==1.6.0
+psycopg2-binary==2.9.11
+pydantic==2.13.0
+pydantic_core==2.46.0
+Pygments==2.20.0
+pytest==9.0.3
+pytest-asyncio==1.3.0
+python-dotenv==1.2.2
+python-Levenshtein==0.27.3
+python-multipart==0.0.26
+PyYAML==6.0.3
+RapidFuzz==3.14.5
+regex==2026.4.4
+requests==2.33.1
+rich==15.0.0
+safetensors==0.7.0
+scikit-learn==1.8.0
+scipy==1.17.1
+sentence-transformers==5.4.1
+setuptools==81.0.0
+shellingham==1.5.4
+sniffio==1.3.1
+starlette==1.0.0
+sympy==1.14.0
+tenacity==9.1.4
+thefuzz==0.22.1
+threadpoolctl==3.6.0
+tokenizers==0.22.2
+torch==2.11.0
+tqdm==4.67.3
+transformers==5.5.4
+typer==0.24.1
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+urllib3==2.6.3
+uvicorn==0.44.0
+watchfiles==1.1.1
+websockets==16.0
