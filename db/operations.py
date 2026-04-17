@@ -609,7 +609,7 @@ def list_jobs(
         LIMIT %s OFFSET %s
     """
     count_sql = f"""
-        SELECT COUNT(*) FROM jobs j
+        SELECT COUNT(*) AS total FROM jobs j
         LEFT JOIN applications a ON j.application_id = a.application_id
         {where_clause}
     """
@@ -617,7 +617,7 @@ def list_jobs(
     with connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(count_sql, params)
-            total_count: int = cur.fetchone()[0]
+            total_count: int = cur.fetchone()["total"]
             cur.execute(select_sql, params + [page_size, offset])
             rows = [dict(row) for row in cur.fetchall()]
 
@@ -748,7 +748,7 @@ def list_applications(
         LIMIT %s OFFSET %s
     """
     count_sql = f"""
-        SELECT COUNT(*) FROM applications a
+        SELECT COUNT(*) AS total FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
         {where_clause}
     """
@@ -756,7 +756,7 @@ def list_applications(
     with connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(count_sql, params)
-            total_count: int = cur.fetchone()[0]
+            total_count: int = cur.fetchone()["total"]
             cur.execute(select_sql, params + [page_size, offset])
             rows = [dict(row) for row in cur.fetchall()]
 
@@ -788,7 +788,7 @@ def get_application_detail(application_id: int) -> dict | None:
     return dict(row) if row else None
 
 
-_VALID_JOB_STATUSES = frozenset({"active", "expired", "closed"})
+_VALID_JOB_STATUSES = frozenset({"active", "expired", "closed", "bad_listing"})
 
 
 def update_job_status(job_id: int, status: str) -> None:

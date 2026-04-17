@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "data-science-career-search"
@@ -15,3 +15,8 @@ dashboard = [
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "db*", "llm*", "matching*", "pipeline*", "scripts*"]
+exclude = ["data*", "config*", "models*", "tests*", "venv*"]

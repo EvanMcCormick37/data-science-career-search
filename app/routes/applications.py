@@ -29,7 +29,7 @@ async def new_application_form(request: Request, job_id: int):
     ctx = get_common_context(request)
     ctx["job"] = job
     ctx["resumes"] = list_available_resumes()
-    return templates.TemplateResponse("applications/_new_form.html", ctx)
+    return templates.TemplateResponse(request, "applications/_new_form.html", ctx)
 
 
 @router.get("/applications", response_class=HTMLResponse)
@@ -86,8 +86,8 @@ async def applications_index(
 
     is_htmx = request.headers.get("HX-Request") == "true"
     if is_htmx:
-        return templates.TemplateResponse("applications/_table.html", ctx)
-    return templates.TemplateResponse("applications/index.html", ctx)
+        return templates.TemplateResponse(request, "applications/_table.html", ctx)
+    return templates.TemplateResponse(request, "applications/index.html", ctx)
 
 
 @router.get("/applications/{application_id}/detail", response_class=HTMLResponse)
@@ -102,7 +102,7 @@ async def application_detail(request: Request, application_id: int):
     ctx = get_common_context(request)
     ctx["app"] = app_data
     ctx["resumes"] = list_available_resumes()
-    return templates.TemplateResponse("applications/_detail.html", ctx)
+    return templates.TemplateResponse(request, "applications/_detail.html", ctx)
 
 
 @router.patch("/applications/{application_id}", response_class=HTMLResponse)
@@ -137,4 +137,4 @@ async def patch_application(request: Request, application_id: int):
     ctx = get_common_context(request)
     ctx["app"] = app_data
     # Return OOB row (server sets hx-swap-oob on the tr element in the template)
-    return templates.TemplateResponse("applications/_row.html", ctx)
+    return templates.TemplateResponse(request, "applications/_row.html", ctx)

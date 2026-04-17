@@ -87,8 +87,8 @@ async def jobs_index(
 
     is_htmx = request.headers.get("HX-Request") == "true"
     if is_htmx:
-        return templates.TemplateResponse("jobs/_table.html", ctx)
-    return templates.TemplateResponse("jobs/index.html", ctx)
+        return templates.TemplateResponse(request, "jobs/_table.html", ctx)
+    return templates.TemplateResponse(request, "jobs/index.html", ctx)
 
 
 @router.get("/jobs/{job_id}/detail", response_class=HTMLResponse)
@@ -100,7 +100,7 @@ async def job_detail(request: Request, job_id: int):
         return HTMLResponse("<p class='text-red-600 p-4'>Job not found.</p>", status_code=404)
     ctx = get_common_context(request)
     ctx["job"] = job
-    return templates.TemplateResponse("jobs/_detail.html", ctx)
+    return templates.TemplateResponse(request, "jobs/_detail.html", ctx)
 
 
 @router.patch("/jobs/{job_id}/status", response_class=HTMLResponse)
@@ -119,4 +119,4 @@ async def patch_job_status(request: Request, job_id: int):
         return HTMLResponse("<p class='text-red-600 p-4'>Job not found.</p>", status_code=404)
     ctx = get_common_context(request)
     ctx["job"] = job
-    return templates.TemplateResponse("jobs/_row.html", ctx)
+    return templates.TemplateResponse(request, "jobs/_row.html", ctx)

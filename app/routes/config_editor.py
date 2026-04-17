@@ -28,7 +28,7 @@ router = APIRouter()
 async def config_index(request: Request):
     from app.main import get_common_context
     ctx = get_common_context(request)
-    return templates.TemplateResponse("config/index.html", ctx)
+    return templates.TemplateResponse(request, "config/index.html", ctx)
 
 
 @router.get("/config/queries", response_class=HTMLResponse)
@@ -36,7 +36,7 @@ async def config_queries_get(request: Request):
     from app.main import get_common_context
     ctx = get_common_context(request)
     ctx["queries"] = read_queries()
-    return templates.TemplateResponse("config/queries.html", ctx)
+    return templates.TemplateResponse(request, "config/queries.html", ctx)
 
 
 @router.post("/config/queries", response_class=HTMLResponse)
@@ -59,7 +59,7 @@ async def config_profile_get(request: Request):
         ctx["profile_text"] = read_career_profile()
     except FileNotFoundError:
         ctx["profile_text"] = ""
-    return templates.TemplateResponse("config/career_profile.html", ctx)
+    return templates.TemplateResponse(request, "config/career_profile.html", ctx)
 
 
 @router.post("/config/profile", response_class=HTMLResponse)

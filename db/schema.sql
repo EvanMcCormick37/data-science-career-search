@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     date_listed           DATE,
     date_ingested         TIMESTAMP DEFAULT NOW(),
     date_updated          TIMESTAMP DEFAULT NOW(),
-    status                TEXT DEFAULT 'active', -- 'active','expired','duplicate','extraction_failed'
+    status                TEXT DEFAULT 'active', -- 'active','expired','closed','bad_listing'
     serp_api_json         JSONB,               -- full raw SerpAPI response for reprocessing
     embedding             vector(768),         -- all-mpnet-base-v2 output
     dedup_hash            TEXT UNIQUE,         -- SHA-256 of normalised title+company+location
