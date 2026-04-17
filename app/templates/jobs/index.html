@@ -2,7 +2,7 @@
 {% block content %}
 <div
   class="flex h-[calc(100vh-3.5rem)]"
-  x-data="{ panelOpen: false }"
+  x-data="{ panelOpen: false, panelWidth: 384 }"
   @panel-open.window="panelOpen = true"
 >
 
@@ -10,23 +10,16 @@
   <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4 flex flex-col gap-4">
     <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Filters</h2>
 
-    <form
-      id="filter-form"
-      hx-get="/jobs"
-      hx-trigger="change, keyup changed delay:400ms from:input[type=text]"
-      hx-target="#jobs-table"
-      hx-swap="outerHTML"
-      hx-push-url="true"
-      class="flex flex-col gap-4"
-    >
+    <form id="filter-form" method="GET" action="/jobs" class="flex flex-col gap-4">
+
       <!-- Sort -->
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Sort by</label>
         <select name="sort" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
-          <option value="tier2_score"  {% if sort == 'tier2_score'  %}selected{% endif %}>Tier 2 Score</option>
-          <option value="tier3_score"  {% if sort == 'tier3_score'  %}selected{% endif %}>Tier 3 Score</option>
-          <option value="date_listed"  {% if sort == 'date_listed'  %}selected{% endif %}>Date Listed</option>
-          <option value="salary_max"   {% if sort == 'salary_max'   %}selected{% endif %}>Salary</option>
+          <option value="tier2_score" {% if sort == 'tier2_score' %}selected{% endif %}>Tier 2 Score</option>
+          <option value="tier3_score" {% if sort == 'tier3_score' %}selected{% endif %}>Tier 3 Score</option>
+          <option value="date_listed" {% if sort == 'date_listed' %}selected{% endif %}>Date Listed</option>
+          <option value="salary_max"  {% if sort == 'salary_max'  %}selected{% endif %}>Salary</option>
         </select>
       </div>
 
@@ -44,6 +37,18 @@
                  value="{{ tier3_min if tier3_min is not none else '' }}"
                  class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
         </div>
+      </div>
+
+      <!-- Date listed range -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Listed from</label>
+        <input type="date" name="date_listed_from" value="{{ date_listed_from }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Listed to</label>
+        <input type="date" name="date_listed_to" value="{{ date_listed_to }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
       </div>
 
       <!-- Text filters -->
@@ -95,7 +100,7 @@
       <!-- Status -->
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
-        {% for st in ['active', 'expired', 'closed'] %}
+        {% for st in ['active', 'applied', 'expired', 'closed', 'bad_fit', 'bad_listing'] %}
         <label class="flex items-center gap-1 text-sm text-gray-700 mb-0.5">
           <input type="checkbox" name="statuses" value="{{ st }}"
                  {% if st in statuses %}checked{% endif %} />
@@ -103,27 +108,44 @@
         </label>
         {% endfor %}
       </div>
+
+      <button type="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md transition-colors">
+        Apply Filters
+      </button>
     </form>
   </aside>
 
   <!-- ── Job Table ──────────────────────────────────────────── -->
-  <main class="flex-1 overflow-auto">
+  <main class="flex-1 overflow-auto min-w-0">
     {% include "jobs/_table.html" %}
   </main>
 
-  <!-- ── Detail Panel ───────────────────────────────────────── -->
+  <!-- ── Detail Panel (draggable) ──────────────────────────── -->
   <div
     x-show="panelOpen"
     x-cloak
-    class="w-96 flex-shrink-0 bg-white border-l border-gray-200 overflow-y-auto flex flex-col"
+    :style="'width: ' + panelWidth + 'px'"
+    class="flex-shrink-0 bg-white border-l border-gray-200 overflow-hidden flex flex-col relative"
   >
-    <div class="flex items-center justify-between p-3 border-b border-gray-200 sticky top-0 bg-white z-10">
+    <!-- Drag handle -->
+    <div
+      class="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-blue-400 z-20 transition-colors"
+      @mousedown.prevent="
+        const startX = $event.clientX;
+        const startW = panelWidth;
+        const move = e => { panelWidth = Math.max(256, Math.min(720, startW - (e.clientX - startX))) };
+        const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up) };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      "
+    ></div>
+
+    <div class="flex items-center justify-between p-3 border-b border-gray-200 sticky top-0 bg-white z-10 pl-4">
       <span class="text-sm font-semibold text-gray-700">Job Detail</span>
-      <button
-        @click="panelOpen = false"
-        class="text-gray-400 hover:text-gray-600 text-xl leading-none"
-        aria-label="Close panel"
-      >&times;</button>
+      <button @click="panelOpen = false"
+              class="text-gray-400 hover:text-gray-600 text-xl leading-none"
+              aria-label="Close panel">&times;</button>
     </div>
     <div id="detail-panel" class="flex-1 overflow-y-auto"></div>
   </div>

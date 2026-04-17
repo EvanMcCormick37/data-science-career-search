@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.services.jobs import get_job_detail, list_jobs
@@ -30,36 +30,41 @@ def _parse_list(val) -> list[str]:
 @router.get("/jobs", response_class=HTMLResponse)
 async def jobs_index(
     request: Request,
-    statuses: Optional[list[str]] = None,
-    tier2_min: Optional[float] = None,
-    tier3_min: Optional[float] = None,
-    seniority: Optional[list[str]] = None,
-    attendance: Optional[list[str]] = None,
+    statuses: Optional[list[str]] = Query(default=None),
+    tier2_min: Optional[str] = Query(default=None),
+    tier3_min: Optional[str] = Query(default=None),
+    seniority: Optional[list[str]] = Query(default=None),
+    attendance: Optional[list[str]] = Query(default=None),
     location: Optional[str] = None,
     title: Optional[str] = None,
     company: Optional[str] = None,
     description: Optional[str] = None,
+    date_listed_from: Optional[str] = None,
+    date_listed_to: Optional[str] = None,
     sort: str = "tier2_score",
     page: int = 1,
     page_size: int = 50,
 ):
     from app.main import get_common_context
 
-    # FastAPI handles multi-value query params as lists when annotated with list[str]
     statuses_list = statuses or ["active"]
     seniority_list = seniority or []
     attendance_list = attendance or []
+    t2 = float(tier2_min) if tier2_min else None
+    t3 = float(tier3_min) if tier3_min else None
 
     rows, total = list_jobs(
         statuses=statuses_list,
-        tier2_min=tier2_min,
-        tier3_min=tier3_min,
+        tier2_min=t2,
+        tier3_min=t3,
         seniority=seniority_list,
         attendance=attendance_list,
         location=location,
         title=title,
         company=company,
         description=description,
+        date_listed_from=date_listed_from or None,
+        date_listed_to=date_listed_to or None,
         sort=sort,
         page=page,
         page_size=page_size,
@@ -76,12 +81,14 @@ async def jobs_index(
             "statuses": statuses_list,
             "seniority": seniority_list,
             "attendance": attendance_list,
-            "tier2_min": tier2_min,
-            "tier3_min": tier3_min,
+            "tier2_min": t2,
+            "tier3_min": t3,
             "location": location or "",
             "title": title or "",
             "company": company or "",
             "description": description or "",
+            "date_listed_from": date_listed_from or "",
+            "date_listed_to": date_listed_to or "",
         }
     )
 

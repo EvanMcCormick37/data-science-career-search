@@ -38,15 +38,17 @@ async def create_application(request: Request):
         offer=_bool_int("offer"),
     )
 
-    redirect_url = f"/applications/{application_id}/detail"
-
-    # For HTMX callers, use HX-Redirect header so the browser navigates
     is_htmx = request.headers.get("HX-Request") == "true"
     if is_htmx:
-        return HTMLResponse(
-            content="",
-            status_code=200,
-            headers={"HX-Redirect": redirect_url},
+        # Fire applicationCreated event (caught by app.js to open /applications in new tab)
+        # Return a success message for the detail panel
+        content = (
+            '<div class="p-4 flex flex-col gap-3 text-sm">'
+            '<p class="text-green-700 font-semibold">✓ Application logged.</p>'
+            f'<a href="/applications" target="_blank" '
+            f'class="text-blue-600 hover:text-blue-800 underline">Open Applications →</a>'
+            '</div>'
         )
+        return HTMLResponse(content=content, status_code=200, headers={"HX-Trigger": "applicationCreated"})
 
-    return RedirectResponse(url=redirect_url, status_code=303)
+    return RedirectResponse(url="/applications", status_code=303)

@@ -539,6 +539,8 @@ def list_jobs(
     title: str | None = None,
     company: str | None = None,
     description: str | None = None,
+    date_listed_from: str | None = None,
+    date_listed_to: str | None = None,
     has_application: bool | None = None,
     sort: str = "tier2_score",
     page: int = 1,
@@ -586,6 +588,12 @@ def list_jobs(
     if description:
         conditions.append("(j.description ILIKE %s OR j.qualifications ILIKE %s OR j.responsibilities ILIKE %s)")
         params.extend([f"%{description}%", f"%{description}%", f"%{description}%"])
+    if date_listed_from:
+        conditions.append("j.date_listed >= %s")
+        params.append(date_listed_from)
+    if date_listed_to:
+        conditions.append("j.date_listed <= %s")
+        params.append(date_listed_to)
     if has_application is True:
         conditions.append("j.application_id IS NOT NULL")
     elif has_application is False:
@@ -788,7 +796,7 @@ def get_application_detail(application_id: int) -> dict | None:
     return dict(row) if row else None
 
 
-_VALID_JOB_STATUSES = frozenset({"active", "expired", "closed", "bad_listing"})
+_VALID_JOB_STATUSES = frozenset({"active", "applied", "expired", "closed", "bad_listing", "bad_fit"})
 
 
 def update_job_status(job_id: int, status: str) -> None:
@@ -856,7 +864,7 @@ def create_application(  # type: ignore[override]  # shadows module-level functi
             )
             application_id: int = cur.fetchone()[0]
             cur.execute(
-                "UPDATE jobs SET application_id = %s WHERE job_id = %s",
+                "UPDATE jobs SET application_id = %s, status = 'applied', date_updated = NOW() WHERE job_id = %s",
                 (application_id, job_id),
             )
 

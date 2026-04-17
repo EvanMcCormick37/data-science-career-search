@@ -89,26 +89,18 @@
     {% set total_pages = ((total - 1) // page_size) + 1 %}
     {% if page > 1 %}
     <a href="?page={{ page - 1 }}&sort={{ sort }}&company={{ company }}&date_from={{ date_from }}&date_to={{ date_to }}&has_offer={{ has_offer }}{% for s in states %}&states={{ s }}{% endfor %}{% for al in assistance_level %}&assistance_level={{ al }}{% endfor %}"
-       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-       hx-get="/applications"
-       hx-target="#applications-table"
-       hx-swap="outerHTML"
-       hx-push-url="true">
+       class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors">
       &larr; Prev
     </a>
     {% else %}
-    <span class="text-sm text-gray-300">&larr; Prev</span>
+    <span class="px-3 py-1.5 text-sm text-gray-300 border border-gray-100 rounded">&larr; Prev</span>
     {% endif %}
 
     <span class="text-xs text-gray-500">{{ page }} / {{ total_pages }}</span>
 
     {% if page < total_pages %}
     <a href="?page={{ page + 1 }}&sort={{ sort }}&company={{ company }}&date_from={{ date_from }}&date_to={{ date_to }}&has_offer={{ has_offer }}{% for s in states %}&states={{ s }}{% endfor %}{% for al in assistance_level %}&assistance_level={{ al }}{% endfor %}"
-       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-       hx-get="/applications"
-       hx-target="#applications-table"
-       hx-swap="outerHTML"
-       hx-push-url="true">
+       class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors">
       Next &rarr;
     </a>
     {% else %}

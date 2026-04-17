@@ -119,9 +119,12 @@
       hx-swap="outerHTML"
       class="text-sm border border-gray-300 rounded px-2 py-1"
     >
-      <option value="active"  {% if job.status == 'active'  %}selected{% endif %}>Active</option>
-      <option value="expired" {% if job.status == 'expired' %}selected{% endif %}>Expired</option>
-      <option value="closed"  {% if job.status == 'closed'  %}selected{% endif %}>Closed</option>
+      <option value="active"   {% if job.status == 'active'   %}selected{% endif %}>Active</option>
+      <option value="applied"  {% if job.status == 'applied'  %}selected{% endif %}>Applied</option>
+      <option value="bad_fit"     {% if job.status == 'bad_fit'     %}selected{% endif %}>Bad Fit</option>
+      <option value="bad_listing" {% if job.status == 'bad_listing' %}selected{% endif %}>Bad Listing</option>
+      <option value="expired"     {% if job.status == 'expired'     %}selected{% endif %}>Expired</option>
+      <option value="closed"   {% if job.status == 'closed'   %}selected{% endif %}>Closed</option>
     </select>
   </div>
 

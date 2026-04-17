@@ -28,6 +28,7 @@
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">T2</th>
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">T3</th>
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Status</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Listed</th>
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Applied</th>
         </tr>
       </thead>
@@ -86,13 +87,22 @@
           <td class="px-3 py-2">
             {% if job.status == 'active' %}
               <span class="score-badge bg-green-100 text-green-700">active</span>
+            {% elif job.status == 'applied' %}
+              <span class="score-badge bg-blue-100 text-blue-700">applied</span>
             {% elif job.status == 'expired' %}
               <span class="score-badge bg-gray-100 text-gray-600">expired</span>
             {% elif job.status == 'closed' %}
               <span class="score-badge bg-red-100 text-red-700">closed</span>
+            {% elif job.status == 'bad_fit' %}
+              <span class="score-badge bg-orange-100 text-orange-700">bad fit</span>
+            {% elif job.status == 'bad_listing' %}
+              <span class="score-badge bg-yellow-100 text-yellow-700">bad listing</span>
             {% else %}
               <span class="score-badge bg-gray-100 text-gray-500">{{ job.status }}</span>
             {% endif %}
+          </td>
+          <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+            {{ job.date_listed | string | truncate(10, killwords=True, end='') if job.date_listed else '—' }}
           </td>
           <td class="px-3 py-2 text-xs">
             {% if job.application_id %}
@@ -116,7 +126,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="10" class="px-4 py-8 text-center text-gray-400">No jobs match your filters.</td>
+          <td colspan="11" class="px-4 py-8 text-center text-gray-400">No jobs match your filters.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -127,32 +137,32 @@
   {% if total > page_size %}
   <div class="px-4 py-3 border-t border-gray-200 bg-white flex items-center justify-between flex-shrink-0">
     {% set total_pages = ((total - 1) // page_size) + 1 %}
+    {% set pg = "?sort=" ~ sort ~ "&title=" ~ title ~ "&company=" ~ company ~ "&location=" ~ location ~ "&description=" ~ description %}
+    {% if tier2_min is not none %}{% set pg = pg ~ "&tier2_min=" ~ tier2_min %}{% endif %}
+    {% if tier3_min is not none %}{% set pg = pg ~ "&tier3_min=" ~ tier3_min %}{% endif %}
+    {% if date_listed_from %}{% set pg = pg ~ "&date_listed_from=" ~ date_listed_from %}{% endif %}
+    {% if date_listed_to %}{% set pg = pg ~ "&date_listed_to=" ~ date_listed_to %}{% endif %}
+    {% for s in statuses %}{% set pg = pg ~ "&statuses=" ~ s %}{% endfor %}
+    {% for s in seniority %}{% set pg = pg ~ "&seniority=" ~ s %}{% endfor %}
+    {% for a in attendance %}{% set pg = pg ~ "&attendance=" ~ a %}{% endfor %}
     {% if page > 1 %}
-    <a href="?page={{ page - 1 }}&sort={{ sort }}&tier2_min={{ tier2_min or '' }}&tier3_min={{ tier3_min or '' }}&title={{ title }}&company={{ company }}&location={{ location }}&description={{ description }}{% for s in statuses %}&statuses={{ s }}{% endfor %}{% for s in seniority %}&seniority={{ s }}{% endfor %}{% for a in attendance %}&attendance={{ a }}{% endfor %}"
-       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-       hx-get="/jobs"
-       hx-target="#jobs-table"
-       hx-swap="outerHTML"
-       hx-push-url="true">
+    <a href="{{ pg }}&page={{ page - 1 }}"
+       class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors">
       &larr; Prev
     </a>
     {% else %}
-    <span class="text-sm text-gray-300">&larr; Prev</span>
+    <span class="px-3 py-1.5 text-sm text-gray-300 border border-gray-100 rounded">&larr; Prev</span>
     {% endif %}
 
     <span class="text-xs text-gray-500">{{ page }} / {{ total_pages }}</span>
 
     {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}&sort={{ sort }}&tier2_min={{ tier2_min or '' }}&tier3_min={{ tier3_min or '' }}&title={{ title }}&company={{ company }}&location={{ location }}&description={{ description }}{% for s in statuses %}&statuses={{ s }}{% endfor %}{% for s in seniority %}&seniority={{ s }}{% endfor %}{% for a in attendance %}&attendance={{ a }}{% endfor %}"
-       class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-       hx-get="/jobs"
-       hx-target="#jobs-table"
-       hx-swap="outerHTML"
-       hx-push-url="true">
+    <a href="{{ pg }}&page={{ page + 1 }}"
+       class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors">
       Next &rarr;
     </a>
     {% else %}
-    <span class="text-sm text-gray-300">Next &rarr;</span>
+    <span class="px-3 py-1.5 text-sm text-gray-300 border border-gray-100 rounded">Next &rarr;</span>
     {% endif %}
   </div>
   {% endif %}

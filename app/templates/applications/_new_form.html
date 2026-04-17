@@ -10,7 +10,8 @@
 
   <form
     hx-post="/applications"
-    hx-push-url="true"
+    hx-target="#detail-panel"
+    hx-swap="innerHTML"
     class="flex flex-col gap-3"
   >
     <input type="hidden" name="job_id" value="{{ job.job_id }}" />

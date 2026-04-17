@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.services.applications import get_application_detail, list_applications, update_application
@@ -35,11 +35,11 @@ async def new_application_form(request: Request, job_id: int):
 @router.get("/applications", response_class=HTMLResponse)
 async def applications_index(
     request: Request,
-    states: Optional[list[str]] = None,
+    states: Optional[list[str]] = Query(default=None),
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     company: Optional[str] = None,
-    assistance_level: Optional[list[str]] = None,
+    assistance_level: Optional[list[str]] = Query(default=None),
     has_offer: Optional[str] = None,
     sort: str = "date_applied",
     page: int = 1,
