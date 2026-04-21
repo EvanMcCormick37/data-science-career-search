@@ -22,6 +22,13 @@ async def create_application(request: Request):
         except (ValueError, TypeError):
             return default
 
+    def _float_or_none(key: str):
+        v = form.get(key)
+        try:
+            return float(v) if v else None
+        except (ValueError, TypeError):
+            return None
+
     def _bool_int(key: str) -> int:
         return 1 if form.get(key) in ("1", "true", "on", "yes") else 0
 
@@ -36,6 +43,7 @@ async def create_application(request: Request):
         reached_human=_bool_int("reached_human"),
         interviews=_int("interviews"),
         offer=_bool_int("offer"),
+        effort=_float_or_none("effort"),
     )
 
     is_htmx = request.headers.get("HX-Request") == "true"

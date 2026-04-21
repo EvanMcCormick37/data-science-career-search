@@ -114,7 +114,7 @@ async def patch_application(request: Request, application_id: int):
     for key, value in form.items():
         if key in {
             "date_applied", "state", "assistance_level", "cover_letter", "resume",
-            "cold_calls", "reached_human", "interviews", "offer",
+            "cold_calls", "reached_human", "interviews", "offer", "effort",
         }:
             # Coerce numeric / boolean fields
             if key in {"cold_calls", "interviews"}:
@@ -124,6 +124,11 @@ async def patch_application(request: Request, application_id: int):
                     fields[key] = 0
             elif key in {"reached_human", "offer"}:
                 fields[key] = 1 if value in ("1", "true", "on", "yes") else 0
+            elif key == "effort":
+                try:
+                    fields[key] = float(value) if value else None
+                except (ValueError, TypeError):
+                    fields[key] = None
             else:
                 fields[key] = value
 

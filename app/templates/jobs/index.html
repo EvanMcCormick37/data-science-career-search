@@ -16,8 +16,8 @@
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Sort by</label>
         <select name="sort" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
-          <option value="tier2_score" {% if sort == 'tier2_score' %}selected{% endif %}>Tier 2 Score</option>
           <option value="tier3_score" {% if sort == 'tier3_score' %}selected{% endif %}>Tier 3 Score</option>
+          <option value="tier2_score" {% if sort == 'tier2_score' %}selected{% endif %}>Tier 2 Score</option>
           <option value="date_listed" {% if sort == 'date_listed' %}selected{% endif %}>Date Listed</option>
           <option value="salary_max"  {% if sort == 'salary_max'  %}selected{% endif %}>Salary</option>
         </select>

@@ -139,11 +139,14 @@ class Orchestrator:
             job_record["tier2_score"]       = fit_score
             job_record["tier2_explanation"] = fit_explanation
 
+            # Jobs scoring below 50 on tier2 are auto-marked as bad_fit
+            job_status = "bad_fit" if (fit_score is not None and fit_score < 50) else "active"
+
             # ── 6. Store ──────────────────────────────────────────────────
             try:
-                job_id = insert_job(job_record, embedding, skill_ids, framework_ids)
+                job_id = insert_job(job_record, embedding, skill_ids, framework_ids, status=job_status)
                 stats["inserted"] += 1
-                if fit_score is not None and fit_score >= TIER3_AUTO_SCORE_MIN:
+                if job_status == "active" and fit_score is not None and fit_score >= TIER3_AUTO_SCORE_MIN:
                     tier3_queue.append({**job_record, "job_id": job_id})
             except Exception as exc:
                 logger.error(
@@ -235,6 +238,8 @@ class Orchestrator:
             job_record["tier2_score"]       = fit_score
             job_record["tier2_explanation"] = fit_explanation
 
+            job_status = "bad_fit" if (fit_score is not None and fit_score < 50) else "active"
+
             try:
                 from db.connection import connection
                 with connection() as conn:
@@ -261,11 +266,11 @@ class Orchestrator:
                                 qualifications = %(qualifications)s,
                                 responsibilities = %(responsibilities)s,
                                 embedding = %(embedding)s::vector,
-                                status = 'active',
+                                status = %(job_status)s,
                                 date_updated = NOW()
                             WHERE dedup_hash = %(dedup_hash)s
                             """,
-                            {**job_record, "embedding": embedding},
+                            {**job_record, "embedding": embedding, "job_status": job_status},
                         )
                         cur.execute(
                             "SELECT job_id FROM jobs WHERE dedup_hash = %s",

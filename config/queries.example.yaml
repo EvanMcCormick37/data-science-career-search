@@ -29,7 +29,6 @@ defaults:
   hl: "en"
 
 queries:
-
   # ── Example 1: Role + metro area ─────────────────────────────────────────
   # Standard search scoped to a specific city. Google Jobs uses `location`
   # to simulate a local user's search, surfacing nearby and commutable roles.
@@ -40,8 +39,8 @@ queries:
   # ── Example 2: Remote-only via query keyword ──────────────────────────────
   # Appending "remote" to `q` is the recommended way to target WFH roles
   # now that Google has deprecated the `ltype=1` filter parameter.
-  - name: "Machine Learning Engineer - Remote"
-    q: "Machine Learning Engineer remote"
+  - name: "Machine Learning Engineer"
+    q: "Machine Learning Engineer"
     location: "United States"
 
   # ── Example 3: Broad national search with a search radius ─────────────────
@@ -82,7 +81,7 @@ queries:
   - name: "ML Engineer - San Francisco (past week)"
     q: "Machine Learning Engineer"
     location: "San Francisco, California"
-    uds: "REPLACE_WITH_REAL_UDS_TOKEN"  # e.g. ADvngMjvPWL3...
+    uds: "REPLACE_WITH_REAL_UDS_TOKEN" # e.g. ADvngMjvPWL3...
 
   # ── Example 7: Domain-specific qualifier ──────────────────────────────────
   # Adding a domain keyword (e.g., "NLP", "computer vision", "time series")

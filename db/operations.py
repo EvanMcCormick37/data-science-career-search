@@ -24,6 +24,7 @@ def insert_job(
     embedding: list[float],
     skill_ids: list[int],
     framework_ids: list[int],
+    status: str = "active",
 ) -> int:
     """
     Insert a job record, its embedding, and taxonomy junction rows.
@@ -47,7 +48,7 @@ def insert_job(
                     %(experience_years_min)s, %(experience_years_max)s,
                     %(salary_min)s, %(salary_max)s, %(salary_currency)s, %(salary_period)s,
                     %(qualifications)s, %(responsibilities)s,
-                    %(date_listed)s, 'active', %(serp_api_json)s,
+                    %(date_listed)s, %(status)s, %(serp_api_json)s,
                     %(embedding)s::vector, %(dedup_hash)s,
                     %(tier2_score)s, %(tier2_explanation)s
                 )
@@ -57,6 +58,7 @@ def insert_job(
                     **job,
                     "serp_api_json": json.dumps(job.get("serp_api_json")),
                     "embedding": embedding,
+                    "status": status,
                 },
             )
             job_id: int = cur.fetchone()[0]
@@ -510,6 +512,9 @@ def get_freshness_stats() -> dict:
                     MAX(date_ingested) AS last_ingested,
                     COUNT(*) FILTER (WHERE date_ingested > NOW() - INTERVAL '24 hours') AS ingested_today,
                     COUNT(*) FILTER (WHERE status = 'active') AS active_total,
+                    COUNT(*) FILTER (WHERE status = 'expired') AS expired_total,
+                    COUNT(*) FILTER (WHERE status = 'applied' ) AS applied_total,
+                    COUNT(*) FILTER (WHERE status IN ('bad_fit','bad_listing')) AS bad_fit_total,
                     COUNT(*) FILTER (WHERE status = 'active' AND tier3_score IS NULL AND tier2_score IS NOT NULL) AS awaiting_tier3
                 FROM jobs
                 """
@@ -747,7 +752,7 @@ def list_applications(
     select_sql = f"""
         SELECT
             a.application_id, a.job_id, a.date_applied, a.state, a.assistance_level,
-            a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer,
+            a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer, a.effort,
             j.title AS job_title, j.company_name, j.tier2_score, j.tier3_score
         FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
@@ -782,7 +787,7 @@ def get_application_detail(application_id: int) -> dict | None:
                 """
                 SELECT
                     a.application_id, a.job_id, a.date_applied, a.state, a.assistance_level,
-                    a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer,
+                    a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer, a.effort,
                     j.title AS job_title, j.company_name, j.location,
                     j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
                     j.tier2_score, j.tier3_score, j.url AS job_url, j.status AS job_status
@@ -823,6 +828,7 @@ def create_application(  # type: ignore[override]  # shadows module-level functi
     reached_human: int = 0,
     interviews: int = 0,
     offer: int = 0,
+    effort: float | None = None,
 ) -> int:
     """
     Dashboard version of create_application — includes the new 'state' column.
@@ -841,11 +847,11 @@ def create_application(  # type: ignore[override]  # shadows module-level functi
                 INSERT INTO applications (
                     job_id, date_applied, state, assistance_level,
                     cover_letter, resume,
-                    cold_calls, reached_human, interviews, offer
+                    cold_calls, reached_human, interviews, offer, effort
                 ) VALUES (
                     %(job_id)s, %(date_applied)s, %(state)s, %(assistance_level)s,
                     %(cover_letter)s, %(resume)s,
-                    %(cold_calls)s, %(reached_human)s, %(interviews)s, %(offer)s
+                    %(cold_calls)s, %(reached_human)s, %(interviews)s, %(offer)s, %(effort)s
                 )
                 RETURNING application_id
                 """,
@@ -860,6 +866,7 @@ def create_application(  # type: ignore[override]  # shadows module-level functi
                     "reached_human":    reached_human,
                     "interviews":       interviews,
                     "offer":            offer,
+                    "effort":           effort,
                 },
             )
             application_id: int = cur.fetchone()[0]
@@ -879,7 +886,7 @@ def update_application(application_id: int, **fields) -> None:  # type: ignore[o
     """
     _UPDATABLE = frozenset({
         "date_applied", "state", "assistance_level", "cover_letter", "resume",
-        "cold_calls", "reached_human", "interviews", "offer",
+        "cold_calls", "reached_human", "interviews", "offer", "effort",
     })
     filtered = {k: v for k, v in fields.items() if k in _UPDATABLE}
     if not filtered:

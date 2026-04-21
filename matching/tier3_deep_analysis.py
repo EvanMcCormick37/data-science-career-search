@@ -9,10 +9,11 @@ Results are persisted to jobs.tier3_score and jobs.tier3_explanation.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Sequence
 
 from config.settings import DEEP_ANALYSIS_MODEL
-from db.operations import update_tier3_scores
+from db.operations import update_job_status, update_tier3_scores
 from llm.client import complete_json
 
 logger = logging.getLogger(__name__)
@@ -117,11 +118,10 @@ def analyse_batch(
         results.append(enriched)
 
         if persist and job.get("job_id"):
-            update_tier3_scores(
-                job["job_id"],
-                enriched.get("fit_score", 0),
-                enriched.get("explanation", ""),
-            )
+            tier3_score = enriched.get("fit_score", 0)
+            update_tier3_scores(job["job_id"], tier3_score, enriched.get("explanation", ""))
+            if tier3_score < 60:
+                update_job_status(job["job_id"], "bad_fit")
 
     results.sort(key=lambda j: j.get("fit_score", 0), reverse=True)
     logger.info(

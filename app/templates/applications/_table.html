@@ -27,6 +27,7 @@
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Interviews</th>
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Human</th>
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Offer</th>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Effort</th>
         </tr>
       </thead>
       <tbody>
@@ -73,10 +74,13 @@
               <span class="text-gray-300">—</span>
             {% endif %}
           </td>
+          <td class="px-3 py-2 text-center text-xs text-gray-700">
+            {{ "%.1f"|format(app.effort) if app.effort is not none else '—' }}
+          </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="8" class="px-4 py-8 text-center text-gray-400">No applications found.</td>
+          <td colspan="9" class="px-4 py-8 text-center text-gray-400">No applications found.</td>
         </tr>
         {% endfor %}
       </tbody>
