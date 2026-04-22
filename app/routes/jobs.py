@@ -41,7 +41,7 @@ async def jobs_index(
     description: Optional[str] = None,
     date_listed_from: Optional[str] = None,
     date_listed_to: Optional[str] = None,
-    sort: str = "tier2_score",
+    sort: str = "tier3_score",
     page: int = 1,
     page_size: int = 50,
 ):
