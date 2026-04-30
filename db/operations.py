@@ -510,12 +510,11 @@ def get_freshness_stats() -> dict:
                 """
                 SELECT
                     MAX(date_ingested) AS last_ingested,
-                    COUNT(*) FILTER (WHERE date_ingested > NOW() - INTERVAL '24 hours') AS ingested_today,
                     COUNT(*) FILTER (WHERE status = 'active') AS active_total,
-                    COUNT(*) FILTER (WHERE status = 'expired') AS expired_total,
+                    COUNT(*) FILTER (WHERE status = 'active' AND date_ingested > NOW() - INTERVAL '24 hours') AS ingested_today,
                     COUNT(*) FILTER (WHERE status = 'applied' ) AS applied_total,
-                    COUNT(*) FILTER (WHERE status IN ('bad_fit','bad_listing')) AS bad_fit_total,
-                    COUNT(*) FILTER (WHERE status = 'active' AND tier3_score IS NULL AND tier2_score IS NOT NULL) AS awaiting_tier3
+                    COUNT(*) FILTER (WHERE status = 'expired') AS expired_total,
+                    COUNT(*) FILTER (WHERE status IN ('bad_fit','bad_listing')) AS bad_fit_total
                 FROM jobs
                 """
             )
@@ -523,6 +522,50 @@ def get_freshness_stats() -> dict:
     last_ingested = row.get("last_ingested")
     row["last_ingested_ago"] = _ago(last_ingested)
     return row
+
+
+def expire_stale_applications() -> int:
+    """
+    Mark submitted applications with date_applied older than 30 days as expired.
+    Returns the number of rows updated.
+    """
+    with connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE applications
+                SET state = 'expired'
+                WHERE state = 'submitted'
+                  AND date_applied < CURRENT_DATE - INTERVAL '30 days'
+                """
+            )
+            count = cur.rowcount
+    logger.info(f"Expired {count} stale application(s)")
+    return count
+
+
+def get_application_stats() -> dict:
+    """
+    Return counts for the applications nav header.
+    Keys: app_total, app_awaiting, app_reached_human, app_interviewed,
+          app_offers, app_rejected, app_expired.
+    """
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*)                                         AS app_total,
+                    COUNT(*) FILTER (WHERE state = 'submitted')      AS app_awaiting,
+                    COUNT(*) FILTER (WHERE reached_human = 1)        AS app_reached_human,
+                    COUNT(*) FILTER (WHERE interviews > 0)           AS app_interviewed,
+                    COUNT(*) FILTER (WHERE offer = 1)                AS app_offers,
+                    COUNT(*) FILTER (WHERE state = 'rejected')       AS app_rejected,
+                    COUNT(*) FILTER (WHERE state = 'expired')        AS app_expired
+                FROM applications
+                """
+            )
+            return dict(cur.fetchone())
 
 
 _VALID_JOB_SORTS = {
@@ -699,7 +742,7 @@ def get_job_detail(job_id: int) -> dict | None:
 
 _VALID_APP_SORTS = {
     "date_applied": "a.date_applied DESC NULLS LAST",
-    "state":        "a.state ASC",
+    "state":        "CASE a.state WHEN 'offer' THEN 0 WHEN 'interviewing' THEN 1 WHEN 'submitted' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END ASC",
     "company_name": "j.company_name ASC",
 }
 

@@ -4,6 +4,7 @@
 {% set sel_offer        = "selected" if app.state == "offer"        else "" %}
 {% set sel_rejected     = "selected" if app.state == "rejected"     else "" %}
 {% set sel_withdrawn    = "selected" if app.state == "withdrawn"    else "" %}
+{% set sel_expired      = "selected" if app.state == "expired"      else "" %}
 
 {% set sel_ai       = "selected" if app.assistance_level == "ai"       else "" %}
 {% set sel_assisted = "selected" if app.assistance_level == "assisted" else "" %}
@@ -67,6 +68,7 @@
             <option value="offer"        {{ sel_offer }}>🎉 Offer Received</option>
             <option value="rejected"     {{ sel_rejected }}>✗ Rejected</option>
             <option value="withdrawn"    {{ sel_withdrawn }}>↩ Withdrawn</option>
+            <option value="expired"      {{ sel_expired }}>⌛ Expired</option>
           </select>
         </div>
 

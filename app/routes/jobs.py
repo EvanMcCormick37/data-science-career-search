@@ -92,6 +92,7 @@ async def jobs_index(
         }
     )
 
+    ctx["page_name"] = "jobs"
     is_htmx = request.headers.get("HX-Request") == "true"
     if is_htmx:
         return templates.TemplateResponse(request, "jobs/_table.html", ctx)

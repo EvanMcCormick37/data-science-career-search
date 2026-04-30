@@ -51,6 +51,8 @@
               <span class="score-badge bg-red-100 text-red-700">rejected</span>
             {% elif app.state == 'withdrawn' %}
               <span class="score-badge bg-gray-100 text-gray-600">withdrawn</span>
+            {% elif app.state == 'expired' %}
+              <span class="score-badge bg-slate-100 text-slate-500">expired</span>
             {% else %}
               <span class="score-badge bg-gray-100 text-gray-400">—</span>
             {% endif %}

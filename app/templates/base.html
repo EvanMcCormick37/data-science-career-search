@@ -36,42 +36,23 @@
           >Config</a
         >
       </div>
-      <!-- Freshness stats -->
+      <!-- Header stats -->
       <div class="flex items-center gap-4 text-xs text-slate-300">
-        {% if freshness %}
-        <span title="Active jobs">
-          <span class="text-blue-400 font-semibold"
-            >{{ freshness.active_total }}</span
-          >
-          active
-        </span>
-        <span title="Ingested in last 24h">
-          <span class="text-green-400 font-semibold"
-            >{{ freshness.ingested_today }}</span
-          >
-          today
-        </span>
-        <span title="Applied jobs">
-          <span class="text-yellow-400 font-semibold"
-            >{{ freshness.applied_total }}</span
-          >
-          applied
-        </span>
-        <span title="Expired jobs">
-          <span class="text-grey-400 font-semibold"
-            >{{ freshness.expired_total }}</span
-          >
-          expired
-        </span>
-        <span title="Bad jobs">
-          <span class="text-red-400 font-semibold"
-            >{{ freshness.bad_fit_total }}</span
-          >
-          bad
-        </span>
-        <span title="Last ingestion time" class="text-slate-400">
-          {{ freshness.last_ingested_ago }}
-        </span>
+        {% if page_name == 'applications' and app_stats %}
+          <span title="Total applications"><span class="text-blue-400 font-semibold">{{ app_stats.app_total }}</span> applied</span>
+          <span title="Awaiting response (submitted)"><span class="text-slate-300 font-semibold">{{ app_stats.app_awaiting }}</span> awaiting</span>
+          <span title="Reached a human"><span class="text-yellow-400 font-semibold">{{ app_stats.app_reached_human }}</span> reached human</span>
+          <span title="Interviewed"><span class="text-purple-400 font-semibold">{{ app_stats.app_interviewed }}</span> interviewed</span>
+          <span title="Offers received"><span class="text-green-400 font-semibold">{{ app_stats.app_offers }}</span> offers</span>
+          <span title="Rejected"><span class="text-red-400 font-semibold">{{ app_stats.app_rejected }}</span> rejected</span>
+          <span title="Expired (no response in 30d)"><span class="text-slate-400 font-semibold">{{ app_stats.app_expired }}</span> expired</span>
+        {% elif freshness %}
+          <span title="Active jobs"><span class="text-blue-400 font-semibold">{{ freshness.active_total }}</span> active</span>
+          <span title="Ingested in last 24h"><span class="text-green-400 font-semibold">{{ freshness.ingested_today }}</span> today</span>
+          <span title="Applied jobs"><span class="text-yellow-400 font-semibold">{{ freshness.applied_total }}</span> applied</span>
+          <span title="Expired jobs"><span class="text-slate-400 font-semibold">{{ freshness.expired_total }}</span> expired</span>
+          <span title="Bad fit / bad listing"><span class="text-red-400 font-semibold">{{ freshness.bad_fit_total }}</span> bad</span>
+          <span title="Last ingestion time" class="text-slate-400">{{ freshness.last_ingested_ago }}</span>
         {% endif %}
       </div>
     </nav>

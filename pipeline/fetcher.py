@@ -62,6 +62,24 @@ def _make_params(query: dict) -> dict:
             params[key] = query[key]
     return params
 
+# Lowercase substrings — any `via` field containing one of these is dropped.
+_BLOCKED_SOURCES: frozenset[str] = frozenset({
+    "ai salary map",
+})
+
+
+def _is_valid_job(job: dict) -> bool:
+    """Return False for known non-job or spam sources."""
+    
+    via = job.get("via", "").lower()
+    if any(blocked in via for blocked in _BLOCKED_SOURCES):
+        return False
+    
+    desc = job.get("description","")
+    if len(desc) < 1000:
+        return False
+    
+    return True
 
 def fetch_jobs(
     mode: Mode = "daily",
@@ -110,7 +128,8 @@ def fetch_jobs(
             logger.debug(f"  Page {page + 1}: {len(jobs)} jobs")
 
             for job in jobs:
-                yield {**job, "serp_api_json": response}
+                if _is_valid_job(job):
+                    yield {**job, "serp_api_json": response}
 
             next_token = response.get("serpapi_pagination", {}).get("next_page_token")
             if not next_token:

@@ -41,7 +41,7 @@ async def applications_index(
     company: Optional[str] = None,
     assistance_level: Optional[list[str]] = Query(default=None),
     has_offer: Optional[str] = None,
-    sort: str = "date_applied",
+    sort: str = "state",
     page: int = 1,
     page_size: int = 50,
 ):
@@ -84,6 +84,7 @@ async def applications_index(
         }
     )
 
+    ctx["page_name"] = "applications"
     is_htmx = request.headers.get("HX-Request") == "true"
     if is_htmx:
         return templates.TemplateResponse(request, "applications/_table.html", ctx)
