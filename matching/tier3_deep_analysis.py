@@ -1,46 +1,90 @@
 """
 Tier 3 — Deep career_profile-fit analysis via an expensive model (OpenRouter).
 
-Takes the top candidates (pre-ranked by tier2_score) and produces a per-job
-fit score and explanation via DEEP_ANALYSIS_MODEL.
+Takes the top candidates (pre-ranked by t2_score) and produces two independent
+per-job scores via DEEP_ANALYSIS_MODEL:
 
-Results are persisted to jobs.tier3_score and jobs.tier3_explanation.
+  t3_qualification  How qualified the candidate is for the role (1–100).
+  t3_fit            How well the job aligns with the candidate's preferences (1–100).
+
+These are combined into a single t3_score (match score) using the formula:
+  t3_score = ((1 - β) + β * (t3_fit / 100)) * (t3_qualification / 100) * 100
+where β = FITNESS_WEIGHT (default 0.2).  A qualification of 0 makes the match 0;
+a fit of 0 only discounts the match by β.
+
+Results are persisted to jobs.t3_score, jobs.t3_explanation, jobs.t3_qualification,
+and jobs.t3_fit.
 """
 from __future__ import annotations
 
 import logging
-import math
 from typing import Sequence
 
-from config.settings import DEEP_ANALYSIS_MODEL
-from db.operations import update_job_status, update_tier3_scores
+from config.settings import DEEP_ANALYSIS_MODEL, FITNESS_WEIGHT
+from db.operations import update_tier3_scores
 from llm.client import complete_json
 
 logger = logging.getLogger(__name__)
 
 _SYSTEM = """You are an expert career advisor and resume/job evaluator.
 
-Given a candidate's career profile and a specific job listing, determine a 'fit score' which captures how good of a match the applicant is for said job.'
-Your goal is to filter out jobs which are a poor fit, so be brutally honest and realistic in your evaluations.
-This is currently a very difficult job market, so be pessimistic about the applicant's chances at getting a job: \
-    penalize any gaps between the applicant's percieved qualifications and the job's desired qualifications, and only give an 'exceptional fit' score to jobs for which the applicant is a true all-star given their background and qualifications.
-However, if you think a job is a strong or excellent fit, don't be afraid to say so emphatically and reflect this reality in your rating.
+You will analyze a candidate's career profile against a specific job listing and produce
+two completely independent evaluations.  The separation of concerns is strict:
+
+────────────────────────────────────────────────────────────────
+EVALUATION 1 — QUALIFICATION SCORE (1–100)
+────────────────────────────────────────────────────────────────
+Measure only how qualified the candidate is for this specific role.
+Base your score entirely on demonstrated skills, depth of experience, and background
+versus the job's stated requirements.  Do NOT consider the candidate's preferences,
+location, compensation needs, or whether they would enjoy the job.
+
+Be harsh and maximally differentiated, especially above 60.  The purpose of this
+score is to separate candidates at the top end — returning 70–85 for every job is
+useless.  The job market is extremely competitive; assume the candidate is competing
+against strong applicants.
 
 Scoring guide:
-  90-100  Exceptional fit — The applicant would be a top candidate for this job, and the job is a perfect fit for the candidate's preferences.
-  75-89   Strong fit — The applicant is a strong candidate and the job is a reasonable fit for their preferences.
-  60-74   Moderate fit — The applicant is an adequate fit for the position, or they are a strong fit but the position isn't a match for their preferences.
-  40-59   Weak fit — There are moderate gaps in experience, making the applicant weak for the job.
-  0-39    Poor fit — There are serious gaps in experience which make it unlikely for the candidate to be seriously considered for the position, or the position is far outside of the candidate's preferances.
+  85–100  Exceptional — Candidate meets or exceeds all requirements; likely a top pick.
+           Reserve 90+ for roles where the candidate is genuinely overqualified.
+  70–84   Strong — Candidate meets most requirements; gaps are minor or incidental.
+  55–69   Adequate — Candidate meets the core requirements but has notable gaps in key areas.
+  40–54   Weak — Meaningful gaps; the candidate would need to stretch significantly.
+  20–39   Poor — Missing critical qualifications; unlikely to progress past screening.
+  1–19    Very poor — Substantially underqualified; application would be rejected immediately.
 
-Be specific and actionable.  Cite exact skills, experiences, or wording from both
-the career profile and the job description.  Resume tips should be concrete changes to the
-career profile text, not general advice.
+────────────────────────────────────────────────────────────────
+EVALUATION 2 — FIT SCORE (1–100)
+────────────────────────────────────────────────────────────────
+Measure only how well this job aligns with the candidate's stated preferences and situation.
+Consider: location/remote preferences, compensation, role type, seniority level, industry,
+company culture signals, and any other preference the candidate mentions.
+Do NOT consider qualifications — a perfect-fit job the candidate is underqualified for
+still scores high here.
+
+Average fit is below 50.  Most jobs have at least some mismatches.  A score of 100 should
+be very rare.  Missing salary data is a mild negative (uncertainty) but not a heavy penalty
+unless compensation is an explicit hard requirement.
+
+Scoring guide:
+  80–100  Excellent — Job closely matches stated preferences across most dimensions.
+  60–79   Good — Reasonable match with a few minor mismatches.
+  40–59   Moderate — Some meaningful mismatches in preference dimensions.
+  20–39   Poor — Significant mismatches (wrong location type, seniority, industry, etc.)
+  1–19    Very poor — Largely incompatible with stated preferences.
+
+────────────────────────────────────────────────────────────────
+OUTPUT FORMAT
+────────────────────────────────────────────────────────────────
+Write your reasoning first, then state the score.  Be specific: cite exact skills,
+experience items, or preference statements from both the career profile and the job listing.
+
 Return ONLY valid JSON with this exact structure:
-
 {
-  "fit_score": <integer 0-100>,
-  "explanation": <explanation>
+  "qual_explanation": "<detailed reasoning about qualification level>",
+  "qual_score": <integer 1-100>,
+  "fit_explanation": "<detailed reasoning about preference alignment>",
+  "fit_score": <integer 1-100>
 }
 """
 
@@ -69,8 +113,17 @@ def _format_user_message(career_profile_text: str, job: dict) -> str:
     )
 
 
+def _compute_match_score(qual: float, fit: float) -> float:
+    """
+    match = ((1 - β) + β * (fit / 100)) * (qual / 100) * 100
+    A qual of 0 drives match to 0; a fit of 0 discounts by β only.
+    """
+    β = FITNESS_WEIGHT
+    return round(((1 - β) + β * (fit / 100)) * (qual / 100) * 100, 1)
+
+
 def _analyse_one(job: dict, career_profile_text: str) -> dict:
-    """Run deep analysis for a single job. Returns the job dict with analysis added."""
+    """Run deep analysis for a single job. Returns the job dict enriched with analysis."""
     messages = [
         {"role": "system", "content": _SYSTEM},
         {"role": "user",   "content": _format_user_message(career_profile_text, job)},
@@ -85,9 +138,30 @@ def _analyse_one(job: dict, career_profile_text: str) -> dict:
             f"Tier 3 analysis failed for {job.get('title')!r} "
             f"@ {job.get('company_name')!r}: {exc}"
         )
-        analysis = {"fit_score": 0, "explanation": f"Analysis failed: {exc}"}
+        analysis = {
+            "qual_score": 0,
+            "fit_score": 0,
+            "qual_explanation": f"Analysis failed: {exc}",
+            "fit_explanation": "",
+        }
 
-    return {**job, **analysis}
+    qual_score = int(analysis.get("qual_score", 0))
+    fit_score  = int(analysis.get("fit_score",  0))
+    t3_score   = _compute_match_score(qual_score, fit_score)
+
+    qual_exp = analysis.get("qual_explanation", "")
+    fit_exp  = analysis.get("fit_explanation",  "")
+    t3_explanation = f"Qualification:\n{qual_exp}\n\nFit:\n{fit_exp}"
+
+    return {
+        **job,
+        "qual_score":      qual_score,
+        "fit_score":       fit_score,
+        "t3_score":        t3_score,
+        "t3_qualification": qual_score,
+        "t3_fit":          fit_score,
+        "t3_explanation":  t3_explanation,
+    }
 
 
 def analyse_batch(
@@ -97,16 +171,16 @@ def analyse_batch(
     persist: bool = True,
 ) -> list[dict]:
     """
-    Run deep analysis on each job in sequence (these are expensive calls —
-    expected to be ≤15 jobs).  Results are sorted by fit_score descending.
+    Run deep analysis on each job in sequence (expensive calls — expected ≤15 jobs).
+    Results are sorted by t3_score descending.
 
     Args:
-        jobs:        Tier 2 top candidates.
+        jobs:                Tier 2 top candidates.
         career_profile_text: Full career_profile text.
-        persist:     If True, write scores to the DB.
+        persist:             If True, write scores to the DB.
 
     Returns:
-        List of job dicts enriched with fit analysis, sorted by fit_score desc.
+        List of job dicts enriched with fit analysis, sorted by t3_score desc.
     """
     model_label = DEEP_ANALYSIS_MODEL
     logger.info(f"Tier 3: analysing {len(jobs)} jobs with {model_label!r} …")
@@ -121,15 +195,20 @@ def analyse_batch(
         results.append(enriched)
 
         if persist and job.get("job_id"):
-            tier3_score = enriched.get("fit_score", 0)
-            update_tier3_scores(job["job_id"], tier3_score, enriched.get("explanation", ""))
-            if tier3_score < 60:
-                update_job_status(job["job_id"], "bad_fit")
+            update_tier3_scores(
+                job["job_id"],
+                t3_score=enriched["t3_score"],
+                t3_explanation=enriched["t3_explanation"],
+                t3_qualification=enriched["t3_qualification"],
+                t3_fit=enriched["t3_fit"],
+            )
 
-    results.sort(key=lambda j: j.get("fit_score", 0), reverse=True)
+    results.sort(key=lambda j: j.get("t3_score", 0), reverse=True)
     logger.info(
         f"Tier 3 complete. Top: {results[0].get('title')!r} "
-        f"(score={results[0].get('fit_score')})"
+        f"(match={results[0].get('t3_score')}, "
+        f"qual={results[0].get('t3_qualification')}, "
+        f"fit={results[0].get('t3_fit')})"
         if results else "Tier 3: no results"
     )
     return results

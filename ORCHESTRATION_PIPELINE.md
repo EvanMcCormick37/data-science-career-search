@@ -405,7 +405,7 @@ Replace `logging.getLogger(__name__)` calls with structured JSON logging using `
 ```python
 import structlog
 log = structlog.get_logger()
-log.info("job_inserted", job_id=job_id, title=job_record["title"], tier2_score=fit_score)
+log.info("job_inserted", job_id=job_id, title=job_record["title"], t2_score=fit_score)
 ```
 
 Structured logs are queryable in Prefect Cloud's log viewer and trivially parseable if forwarded to a log aggregator later.

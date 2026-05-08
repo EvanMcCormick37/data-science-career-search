@@ -41,7 +41,7 @@ def insert_job(
                     salary_min, salary_max, salary_currency, salary_period,
                     qualifications, responsibilities,
                     date_listed, status, serp_api_json, embedding, dedup_hash,
-                    tier2_score, tier2_explanation
+                    t2_score, t2_explanation
                 ) VALUES (
                     %(title)s, %(url)s, %(company_name)s, %(location)s, %(description)s,
                     %(employment_type)s, %(attendance)s, %(seniority)s,
@@ -50,7 +50,7 @@ def insert_job(
                     %(qualifications)s, %(responsibilities)s,
                     %(date_listed)s, %(status)s, %(serp_api_json)s,
                     %(embedding)s::vector, %(dedup_hash)s,
-                    %(tier2_score)s, %(tier2_explanation)s
+                    %(t2_score)s, %(t2_explanation)s
                 )
                 RETURNING job_id
                 """,
@@ -99,17 +99,29 @@ def update_tier2_scores(job_id: int, score: float, explanation: str) -> None:
     with connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE jobs SET tier2_score = %s, tier2_explanation = %s WHERE job_id = %s",
+                "UPDATE jobs SET t2_score = %s, t2_explanation = %s WHERE job_id = %s",
                 (score, explanation, job_id),
             )
 
 
-def update_tier3_scores(job_id: int, score: float, explanation: str) -> None:
+def update_tier3_scores(
+    job_id: int,
+    *,
+    t3_score: float,
+    t3_explanation: str,
+    t3_qualification: float,
+    t3_fit: float,
+) -> None:
     with connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE jobs SET tier3_score = %s, tier3_explanation = %s WHERE job_id = %s",
-                (score, explanation, job_id),
+                """
+                UPDATE jobs
+                SET t3_score = %s, t3_explanation = %s,
+                    t3_qualification = %s, t3_fit = %s
+                WHERE job_id = %s
+                """,
+                (t3_score, t3_explanation, t3_qualification, t3_fit, job_id),
             )
 
 
@@ -143,12 +155,12 @@ def get_top_scored_jobs(
 
     Args:
         top_k:         Maximum number of jobs to return.
-        min_score:     Only include jobs with tier2_score >= this value.
+        min_score:     Only include jobs with t2_score >= this value.
         unscored_only: When True (default), exclude jobs that already have a
-                       tier3_score so the expensive LLM is not run twice.
+                       t3_qualification score so the expensive LLM is not run twice.
                        Pass False to re-score all qualifying jobs.
     """
-    tier3_filter = "AND tier3_score IS NULL" if unscored_only else ""
+    t3_filter = "AND t3_qualification IS NULL" if unscored_only else ""
     with connection() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
@@ -159,16 +171,42 @@ def get_top_scored_jobs(
                     salary_min, salary_max, salary_currency, salary_period,
                     description, qualifications, responsibilities,
                     date_listed, url,
-                    tier2_score, tier2_explanation
+                    t2_score, t2_explanation
                 FROM jobs
                 WHERE status = 'active'
-                  AND tier2_score IS NOT NULL
-                  AND tier2_score >= %(min_score)s
-                  {tier3_filter}
-                ORDER BY tier2_score DESC
+                  AND t2_score IS NOT NULL
+                  AND t2_score >= %(min_score)s
+                  {t3_filter}
+                ORDER BY t2_score DESC
                 LIMIT %(top_k)s
                 """,
                 {"top_k": top_k, "min_score": min_score},
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+
+def get_active_t3_scored_jobs() -> list[dict]:
+    """
+    Return all active jobs that already have a t3_score (i.e. were previously
+    deep-analysed).  Used by the rescore migration script to re-evaluate only
+    jobs that have existing T3 data.
+    """
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    job_id, title, company_name, location,
+                    attendance, seniority, employment_type,
+                    salary_min, salary_max, salary_currency, salary_period,
+                    description, qualifications, responsibilities,
+                    date_listed, url,
+                    t2_score, t2_explanation
+                FROM jobs
+                WHERE status = 'active'
+                  AND t3_score IS NOT NULL
+                ORDER BY t2_score DESC NULLS LAST
+                """
             )
             return [dict(row) for row in cur.fetchall()]
 
@@ -569,18 +607,18 @@ def get_application_stats() -> dict:
 
 
 _VALID_JOB_SORTS = {
-    "tier2_score": "j.tier2_score DESC NULLS LAST",
-    "tier3_score": "j.tier3_score DESC NULLS LAST",
-    "date_listed":  "j.date_listed DESC NULLS LAST",
-    "salary_max":   "j.salary_max DESC NULLS LAST",
+    "t2_score":  "j.t2_score DESC NULLS LAST",
+    "t3_score":  "j.t3_score DESC NULLS LAST",
+    "date_listed": "j.date_listed DESC NULLS LAST",
+    "salary_max":  "j.salary_max DESC NULLS LAST",
 }
 
 
 def list_jobs(
     *,
     statuses: list[str] | None = None,
-    tier2_min: float | None = None,
-    tier3_min: float | None = None,
+    t2_min: float | None = None,
+    t3_min: float | None = None,
     seniority: list[str] | None = None,
     attendance: list[str] | None = None,
     location: str | None = None,
@@ -590,7 +628,7 @@ def list_jobs(
     date_listed_from: str | None = None,
     date_listed_to: str | None = None,
     has_application: bool | None = None,
-    sort: str = "tier2_score",
+    sort: str = "t2_score",
     page: int = 1,
     page_size: int = 50,
 ) -> tuple[list[dict], int]:
@@ -610,12 +648,12 @@ def list_jobs(
     conditions.append(f"j.status IN ({placeholders})")
     params.extend(safe_statuses)
 
-    if tier2_min is not None:
-        conditions.append("j.tier2_score >= %s")
-        params.append(tier2_min)
-    if tier3_min is not None:
-        conditions.append("j.tier3_score >= %s")
-        params.append(tier3_min)
+    if t2_min is not None:
+        conditions.append("j.t2_score >= %s")
+        params.append(t2_min)
+    if t3_min is not None:
+        conditions.append("j.t3_score >= %s")
+        params.append(t3_min)
     if seniority:
         placeholders = ", ".join(["%s"] * len(seniority))
         conditions.append(f"j.seniority IN ({placeholders})")
@@ -648,7 +686,7 @@ def list_jobs(
         conditions.append("j.application_id IS NULL")
 
     where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
-    order_clause = _VALID_JOB_SORTS.get(sort, _VALID_JOB_SORTS["tier2_score"])
+    order_clause = _VALID_JOB_SORTS.get(sort, _VALID_JOB_SORTS["t2_score"])
     offset = (page - 1) * page_size
 
     select_sql = f"""
@@ -656,7 +694,7 @@ def list_jobs(
             j.job_id, j.title, j.company_name, j.location, j.attendance, j.seniority,
             j.employment_type, j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
             j.date_listed, j.status, j.url,
-            j.tier2_score, j.tier2_explanation, j.tier3_score,
+            j.t2_score, j.t2_explanation, j.t3_score,
             j.application_id, a.state AS application_state
         FROM jobs j
         LEFT JOIN applications a ON j.application_id = a.application_id
@@ -695,7 +733,8 @@ def get_job_detail(job_id: int) -> dict | None:
                     j.employment_type, j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
                     j.description, j.qualifications, j.responsibilities,
                     j.date_listed, j.date_ingested, j.status, j.url,
-                    j.tier2_score, j.tier2_explanation, j.tier3_score, j.tier3_explanation,
+                    j.t2_score, j.t2_explanation,
+                    j.t3_score, j.t3_explanation, j.t3_qualification, j.t3_fit,
                     j.application_id,
                     a.state AS application_state,
                     a.date_applied, a.assistance_level, a.cover_letter, a.resume,
@@ -796,7 +835,7 @@ def list_applications(
         SELECT
             a.application_id, a.job_id, a.date_applied, a.state, a.assistance_level,
             a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer, a.effort,
-            j.title AS job_title, j.company_name, j.tier2_score, j.tier3_score
+            j.title AS job_title, j.company_name, j.t2_score, j.t3_score
         FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
         {where_clause}
@@ -833,7 +872,7 @@ def get_application_detail(application_id: int) -> dict | None:
                     a.cover_letter, a.resume, a.cold_calls, a.reached_human, a.interviews, a.offer, a.effort,
                     j.title AS job_title, j.company_name, j.location,
                     j.salary_min, j.salary_max, j.salary_currency, j.salary_period,
-                    j.tier2_score, j.tier3_score, j.url AS job_url, j.status AS job_status
+                    j.t2_score, j.t3_score, j.url AS job_url, j.status AS job_status
                 FROM applications a
                 JOIN jobs j ON a.job_id = j.job_id
                 WHERE a.application_id = %s

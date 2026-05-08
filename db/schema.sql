@@ -37,11 +37,13 @@ CREATE TABLE IF NOT EXISTS jobs (
     embedding             vector(768),         -- all-mpnet-base-v2 output
     dedup_hash            TEXT UNIQUE,         -- SHA-256 of normalised title+company+location
 
-    -- Relevance scores (tier2 populated at ingestion; tier3 populated on demand)
-    tier2_score           REAL,
-    tier2_explanation     TEXT,
-    tier3_score           REAL,
-    tier3_explanation     TEXT
+    -- Relevance scores (t2 populated at ingestion; t3 populated on demand)
+    t2_score              REAL,
+    t2_explanation        TEXT,
+    t3_score              REAL,    -- computed match: ((1-β) + β*(t3_fit/100)) * (t3_qualification/100) * 100
+    t3_explanation        TEXT,    -- combined "Qualification:\n...\n\nFit:\n..." string
+    t3_qualification      REAL,    -- LLM qualification score 1–100
+    t3_fit                REAL     -- LLM fit score 1–100
 );
 
 
@@ -170,7 +172,7 @@ DO $$ BEGIN
 END $$;
 
 -- Dashboard-optimized indexes
-CREATE INDEX IF NOT EXISTS idx_jobs_tier2_score
-    ON jobs (tier2_score DESC NULLS LAST) WHERE tier2_score IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_jobs_t2_score
+    ON jobs (t2_score DESC NULLS LAST) WHERE t2_score IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_applications_state
     ON applications (state);

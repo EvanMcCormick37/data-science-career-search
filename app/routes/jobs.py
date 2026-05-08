@@ -31,8 +31,8 @@ def _parse_list(val) -> list[str]:
 async def jobs_index(
     request: Request,
     statuses: Optional[list[str]] = Query(default=None),
-    tier2_min: Optional[str] = Query(default=None),
-    tier3_min: Optional[str] = Query(default=None),
+    t2_min: Optional[str] = Query(default=None),
+    t3_min: Optional[str] = Query(default=None),
     seniority: Optional[list[str]] = Query(default=None),
     attendance: Optional[list[str]] = Query(default=None),
     location: Optional[str] = None,
@@ -41,7 +41,7 @@ async def jobs_index(
     description: Optional[str] = None,
     date_listed_from: Optional[str] = None,
     date_listed_to: Optional[str] = None,
-    sort: str = "tier3_score",
+    sort: str = "t3_score",
     page: int = 1,
     page_size: int = 50,
 ):
@@ -50,13 +50,13 @@ async def jobs_index(
     statuses_list = statuses or ["active"]
     seniority_list = seniority or []
     attendance_list = attendance or []
-    t2 = float(tier2_min) if tier2_min else None
-    t3 = float(tier3_min) if tier3_min else None
+    t2 = float(t2_min) if t2_min else None
+    t3 = float(t3_min) if t3_min else None
 
     rows, total = list_jobs(
         statuses=statuses_list,
-        tier2_min=t2,
-        tier3_min=t3,
+        t2_min=t2,
+        t3_min=t3,
         seniority=seniority_list,
         attendance=attendance_list,
         location=location,
@@ -81,8 +81,8 @@ async def jobs_index(
             "statuses": statuses_list,
             "seniority": seniority_list,
             "attendance": attendance_list,
-            "tier2_min": t2,
-            "tier3_min": t3,
+            "t2_min": t2,
+            "t3_min": t3,
             "location": location or "",
             "title": title or "",
             "company": company or "",

@@ -124,13 +124,13 @@ def print_tier2(jobs: list[dict]) -> None:
     print(f"TIER 2 — Scored by {len(jobs)} candidates (cheap LLM)")
     print(f"{'='*70}")
     for i, job in enumerate(jobs, 1):
-        score = job.get("tier2_score", 0)
+        score = job.get("t2_score", 0)
         print(
             f"{i:>3}. [score={score:>3}] {job.get('title', '?'):<40} "
             f"@ {job.get('company_name', '?')}"
         )
-        if job.get("tier2_explanation"):
-            print(f"       {job['tier2_explanation']}")
+        if job.get("t2_explanation"):
+            print(f"       {job['t2_explanation']}")
 
 
 def print_tier3(jobs: list[dict]) -> None:
@@ -138,16 +138,18 @@ def print_tier3(jobs: list[dict]) -> None:
     print(f"TIER 3 — Deep Analysis ({len(jobs)} jobs)")
     print(f"{'='*70}")
     for i, job in enumerate(jobs, 1):
-        score = job.get("fit_score", 0)
+        t3_score = job.get("t3_score", 0)
+        qual     = job.get("t3_qualification") or job.get("qual_score", "?")
+        fit      = job.get("t3_fit")       or job.get("fit_score", "?")
         print(f"\n{'─'*70}")
-        print(f"#{i}  [fit={score}/100]")
+        print(f"#{i}  match={t3_score}  qual={qual}/100  fit={fit}/100")
         print(f"    {job.get('title', '?')} @ {job.get('company_name', '?')}")
         if job.get("location"):
             print(f"    {job['location']}  {job.get('attendance', '')}")
         if job.get("url"):
             print(f"    {job['url']}")
-        if job.get("explanation"):
-            print(f"\n    {job['explanation']}")
+        if job.get("t3_explanation"):
+            print(f"\n    {job['t3_explanation']}")
 
 
 def main() -> None:

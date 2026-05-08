@@ -42,13 +42,13 @@
         View posting ↗
       </a>
       {% endif %}
-      {% if app.tier2_score is not none or app.tier3_score is not none %}
+      {% if app.t2_score is not none or app.t3_score is not none %}
       <div class="flex gap-3 mt-2 pt-2 border-t border-blue-200">
-        {% if app.tier2_score is not none %}
-        <span class="text-xs text-gray-500">Fit T2: <strong class="text-gray-800">{{ app.tier2_score | int }}</strong></span>
+        {% if app.t2_score is not none %}
+        <span class="text-xs text-gray-500">Fit T2: <strong class="text-gray-800">{{ app.t2_score | int }}</strong></span>
         {% endif %}
-        {% if app.tier3_score is not none %}
-        <span class="text-xs text-gray-500">Fit T3: <strong class="text-gray-800">{{ app.tier3_score | int }}</strong></span>
+        {% if app.t3_score is not none %}
+        <span class="text-xs text-gray-500">Fit T3: <strong class="text-gray-800">{{ app.t3_score | int }}</strong></span>
         {% endif %}
       </div>
       {% endif %}

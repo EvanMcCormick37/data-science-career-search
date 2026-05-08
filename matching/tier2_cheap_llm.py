@@ -99,7 +99,7 @@ async def _score_one(
             score       = 0
             explanation = f"Scoring error: {exc}"
 
-    return {**job, "tier2_score": score, "tier2_explanation": explanation}
+    return {**job, "t2_score": score, "t2_explanation": explanation}
 
 
 async def _score_all(
@@ -130,29 +130,29 @@ def score_batch(
     Args:
         jobs:        Tier 1 candidate job dicts (must include 'job_id').
         career_profile_text: Full career_profile text used in the scoring prompt.
-        persist:     If True, write tier2_score + tier2_explanation to the DB.
+        persist:     If True, write t2_score + t2_explanation to the DB.
         top_k:       Number of top-scoring jobs to return for Tier 3.
 
     Returns:
-        List of job dicts sorted by tier2_score descending, truncated to top_k.
+        List of job dicts sorted by t2_score descending, truncated to top_k.
     """
     logger.info(f"Tier 2: scoring {len(jobs)} candidates with {SCORING_MODEL!r} …")
     scored = asyncio.run(_score_all(list(jobs), career_profile_text))
 
     if persist:
         for job in scored:
-            if job.get("job_id") and job.get("tier2_score") is not None:
+            if job.get("job_id") and job.get("t2_score") is not None:
                 update_tier2_scores(
                     job["job_id"],
-                    job["tier2_score"],
-                    job.get("tier2_explanation", ""),
+                    job["t2_score"],
+                    job.get("t2_explanation", ""),
                 )
 
-    scored.sort(key=lambda j: j.get("tier2_score", 0), reverse=True)
+    scored.sort(key=lambda j: j.get("t2_score", 0), reverse=True)
     top = scored[:top_k]
 
     logger.info(
-        f"Tier 2: top score={top[0]['tier2_score']} for "
+        f"Tier 2: top score={top[0]['t2_score']} for "
         f"{top[0].get('title')!r} @ {top[0].get('company_name')!r}"
         if top else "Tier 2: no results"
     )

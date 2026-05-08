@@ -9,7 +9,7 @@ before DB insertion, so every job in the database already has a fit score by
 the time ingestion completes.
 
 If the career profile is missing or still a placeholder, scoring is silently
-skipped and the job is inserted with tier2_score = NULL.
+skipped and the job is inserted with t2_score = NULL.
 """
 from __future__ import annotations
 

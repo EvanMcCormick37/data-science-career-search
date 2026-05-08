@@ -136,10 +136,10 @@ class Orchestrator:
 
             # ── 5.5. Score fit (cheap LLM against career profile) ─────────
             fit_score, fit_explanation = self._scorer.score(job_record)
-            job_record["tier2_score"]       = fit_score
-            job_record["tier2_explanation"] = fit_explanation
+            job_record["t2_score"]       = fit_score
+            job_record["t2_explanation"] = fit_explanation
 
-            # Jobs scoring below 50 on tier2 are auto-marked as bad_fit
+            # Jobs scoring below 50 on t2 are auto-marked as bad_fit
             job_status = "bad_fit" if (fit_score is not None and fit_score < 50) else "active"
 
             # ── 6. Store ──────────────────────────────────────────────────
@@ -161,7 +161,7 @@ class Orchestrator:
                 from matching.tier3_deep_analysis import analyse_batch
                 logger.info(
                     f"Auto tier3: scoring {len(tier3_queue)} job(s) "
-                    f"with tier2_score >= {TIER3_AUTO_SCORE_MIN} …"
+                    f"with t2_score >= {TIER3_AUTO_SCORE_MIN} …"
                 )
                 analyse_batch(tier3_queue, career_profile, persist=True)
             else:
@@ -235,8 +235,8 @@ class Orchestrator:
             embedding = self._embedder.embed_job(job_record)
 
             fit_score, fit_explanation = self._scorer.score(job_record)
-            job_record["tier2_score"]       = fit_score
-            job_record["tier2_explanation"] = fit_explanation
+            job_record["t2_score"]       = fit_score
+            job_record["t2_explanation"] = fit_explanation
 
             job_status = "bad_fit" if (fit_score is not None and fit_score < 50) else "active"
 

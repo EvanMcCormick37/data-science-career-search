@@ -158,10 +158,12 @@ Templates prefixed with `_` (e.g. `_table.html`, `_row.html`) are HTMX partials 
 | serp_api_json        | JSONB         | Full raw SerpAPI response — audit trail and reprocessing safety net |
 | embedding            | vector(768)   | all-mpnet-base-v2 output; HNSW indexed                            |
 | dedup_hash           | TEXT UNIQUE   | SHA-256 of normalised title+company+location                      |
-| tier2_score          | REAL          | Cheap LLM fit score (0–100); populated at ingestion               |
-| tier2_explanation    | TEXT          |                                                                    |
-| tier3_score          | REAL          | Expensive LLM fit score; populated on demand                      |
-| tier3_explanation    | TEXT          |                                                                    |
+| t2_score             | REAL          | Cheap LLM fit score (0–100); populated at ingestion               |
+| t2_explanation       | TEXT          |                                                                    |
+| t3_score             | REAL          | Computed match score: `((1-β) + β*(t3_fit/100)) * (t3_qual/100) * 100` |
+| t3_explanation       | TEXT          | Combined "Qualification:\n…\n\nFit:\n…" string                    |
+| t3_qualification     | REAL          | LLM qualification score 1–100; NULL until deep analysis run       |
+| t3_fit               | REAL          | LLM fit-to-preferences score 1–100; NULL until deep analysis run  |
 | application_id       | INTEGER FK    | Back-pointer to applications; NULL until applied                  |
 
 **`jobs.status` values:**
@@ -212,7 +214,7 @@ Skills and frameworks each have three tables:
 
 - HNSW index on `jobs.embedding` (cosine ops) for pgvector ANN search
 - GIN trigram indexes on `jobs.company_name` and `jobs.title`
-- B-tree indexes on `jobs.status`, `jobs.date_listed`, `jobs.dedup_hash`, `jobs.tier2_score`
+- B-tree indexes on `jobs.status`, `jobs.date_listed`, `jobs.dedup_hash`, `jobs.t2_score`
 - `applications.state`
 
 ---
@@ -250,13 +252,17 @@ The full raw SerpAPI response is stored in `serp_api_json` on every job, making 
 | Tier   | Model        | When                           | Output                              |
 | ------ | ------------ | ------------------------------ | ----------------------------------- |
 | Tier 1 | pgvector     | Ad-hoc (`match_career_profile.py`) | Cosine similarity, no LLM call |
-| Tier 2 | Cheap LLM    | At ingestion (always) + ad-hoc re-score | Score 0–100 + explanation    |
-| Tier 3 | Expensive LLM| Auto for high scorers; on-demand via `score_top_jobs.py` | Fit score, strengths, gaps, resume tips |
+| Tier 2 | Cheap LLM    | At ingestion (always) + ad-hoc re-score | `t2_score` 0–100 + explanation    |
+| Tier 3 | Expensive LLM| Auto for high scorers; on-demand via `score_top_jobs.py` | `t3_qualification`, `t3_fit`, computed `t3_score` (match), combined explanation |
+
+**Tier 3 score formula:** `t3_score = ((1 - β) + β × (t3_fit / 100)) × (t3_qualification / 100) × 100`
+where `β = FITNESS_WEIGHT` (default 0.2). A qualification of 0 collapses the match to 0; a fit of 0 only discounts by β.
 
 **Tier 3 paths:**
-- **Primary path:** `scripts/score_top_jobs.py` — query top-K jobs by `tier2_score DESC`, run expensive LLM, persist `tier3_score` / `tier3_explanation`.
+- **Primary path:** `scripts/score_top_jobs.py` — query top-K jobs by `t2_score DESC`, run expensive LLM, persist `t3_score` / `t3_explanation` / `t3_qualification` / `t3_fit`.
 - **Ad-hoc path:** `scripts/match_career_profile.py` — embed career profile, vector search top 100, optionally re-score (tier 2), optionally deep-analyse (tier 3).
-- **Auto path:** The orchestrator queues any newly ingested job with `tier2_score >= 70` for immediate tier 3 analysis within the same batch run.
+- **Auto path:** The orchestrator queues any newly ingested job with `t2_score >= TIER3_AUTO_SCORE_MIN` (default 70) for immediate tier 3 analysis within the same batch run.
+- **Migration path:** `scripts/rescore_active_tier3.py` — re-score active jobs that already have a `t3_score` using the split qualification/fit prompt.
 
 ---
 
@@ -325,7 +331,8 @@ The nav bar shows pipeline freshness (last ingestion time, active job count, app
 | `TIER2_TOP_N`          | `15`                          | Top-N passed to tier 3 in ad-hoc flow         |
 | `TIER2_CONCURRENCY`    | `10`                          | Async concurrency for ad-hoc cheap LLM calls  |
 | `DEEP_ANALYSIS_TOP_K`  | `15`                          | Default K for `score_top_jobs.py`             |
-| `TIER3_AUTO_SCORE_MIN` | `70`                          | tier2_score threshold for auto tier3 at ingest|
+| `TIER3_AUTO_SCORE_MIN` | `70`                          | t2_score threshold for auto tier3 at ingest   |
+| `FITNESS_WEIGHT`       | `0.2`                         | β in t3_score formula; weight of fit vs qual  |
 | `DAILY_MAX_PAGES`      | `1`                           | SerpAPI pages per query in daily mode         |
 | `BACKFILL_MAX_PAGES`   | `10`                          | SerpAPI pages per query in backfill mode      |
 | `JOB_EXPIRY_DAYS`      | `30`                          | Days before active listings are marked expired|

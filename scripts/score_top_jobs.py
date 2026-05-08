@@ -2,18 +2,17 @@
 """
 Deep career-fit analysis for the top K jobs in the database.
 
-Queries active jobs ordered by their cheap-model fit score (tier2_score),
+Queries active jobs ordered by their cheap-model fit score (t2_score),
 then runs the expensive LLM (DEEP_ANALYSIS_MODEL) on the top K to produce
-a detailed per-job report including strengths, gaps, a recommendation, and
-targeted resume tips.
+a detailed per-job report with qualification, fit, and match scores.
 
-Scores are persisted to jobs.tier3_score / jobs.tier3_explanation unless
---no-persist is passed.
+Scores are persisted to jobs.t3_score / jobs.t3_explanation /
+jobs.t3_qualification / jobs.t3_fit unless --no-persist is passed.
 
 Usage:
     python scripts/score_top_jobs.py
     python scripts/score_top_jobs.py --top-k 20
-    python scripts/score_top_jobs.py --min-score 60   # skip jobs below this tier2_score
+    python scripts/score_top_jobs.py --min-score 60   # skip jobs below this t2_score
     python scripts/score_top_jobs.py --no-persist
     python scripts/score_top_jobs.py --output results.json
 """
@@ -92,17 +91,13 @@ def print_results(jobs: list[dict]) -> None:
     print(f"{'='*70}")
 
     for i, job in enumerate(jobs, 1):
-        fit_score = job.get("fit_score", 0)
-        cheap_score = job.get("tier2_score", "n/a")
-        rec = job.get("recommendation", "")
-        rec_label = {
-            "apply":               "APPLY",
-            "apply_with_caveats":  "APPLY w/ CAVEATS",
-            "skip":                "SKIP",
-        }.get(rec, rec.upper() if rec else "—")
+        t3_score  = job.get("t3_score", 0)
+        qual      = job.get("t3_qualification") or job.get("qual_score", "?")
+        fit       = job.get("t3_fit")       or job.get("fit_score", "?")
+        t2_score  = job.get("t2_score", "n/a")
 
         print(f"\n{'─'*70}")
-        print(f"#{i}  [{rec_label}]  deep={fit_score}/100  cheap={cheap_score}/100")
+        print(f"#{i}  match={t3_score}  qual={qual}/100  fit={fit}/100  t2={t2_score}/100")
         print(f"    {job.get('title', '?')} @ {job.get('company_name', '?')}")
 
         loc = job.get("location", "")
@@ -119,10 +114,10 @@ def print_results(jobs: list[dict]) -> None:
         if job.get("url"):
             print(f"    {job['url']}")
 
-        if job.get("tier2_explanation"):
-            print(f"\n    Cheap-model note: {job['tier2_explanation']}")
+        if job.get("t2_explanation"):
+            print(f"\n    T2 note: {job['t2_explanation']}")
 
-        explanation = job.get("explanation", "")
+        explanation = job.get("t3_explanation", "")
         if explanation:
             print(f"\n    Analysis:\n    {explanation}")
 
@@ -138,7 +133,7 @@ def main() -> None:
     jobs = get_top_scored_jobs(
         top_k=args.top_k,
         min_score=args.min_score,
-        unscored_only=not args.rescore,
+        unscored_only=not args.rescore,  # unscored_only checks t3_qualification IS NULL
     )
 
     if not jobs:
@@ -150,7 +145,7 @@ def main() -> None:
 
     logger.info(
         f"Found {len(jobs)} candidate jobs "
-        f"(top cheap-model score: {jobs[0].get('tier2_score')})"
+        f"(top t2 score: {jobs[0].get('t2_score')})"
     )
 
     # ── Run expensive LLM deep analysis ───────────────────────────────────

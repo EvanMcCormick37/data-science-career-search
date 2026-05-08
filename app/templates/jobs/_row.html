@@ -23,26 +23,26 @@
     {% else %}—{% endif %}
   </td>
   <td class="px-3 py-2">
-    {% if job.tier2_score is not none %}
-      {% if job.tier2_score >= 75 %}
-        <span class="score-badge bg-green-100 text-green-800">{{ job.tier2_score | int }}</span>
-      {% elif job.tier2_score >= 50 %}
-        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier2_score | int }}</span>
+    {% if job.t2_score is not none %}
+      {% if job.t2_score >= 75 %}
+        <span class="score-badge bg-green-100 text-green-800">{{ job.t2_score | int }}</span>
+      {% elif job.t2_score >= 50 %}
+        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.t2_score | int }}</span>
       {% else %}
-        <span class="score-badge bg-red-100 text-red-800">{{ job.tier2_score | int }}</span>
+        <span class="score-badge bg-red-100 text-red-800">{{ job.t2_score | int }}</span>
       {% endif %}
     {% else %}
       <span class="score-badge bg-gray-100 text-gray-500">—</span>
     {% endif %}
   </td>
   <td class="px-3 py-2">
-    {% if job.tier3_score is not none %}
-      {% if job.tier3_score >= 75 %}
-        <span class="score-badge bg-green-100 text-green-800">{{ job.tier3_score | int }}</span>
-      {% elif job.tier3_score >= 50 %}
-        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier3_score | int }}</span>
+    {% if job.t3_score is not none %}
+      {% if job.t3_score >= 75 %}
+        <span class="score-badge bg-green-100 text-green-800">{{ job.t3_score | int }}</span>
+      {% elif job.t3_score >= 50 %}
+        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.t3_score | int }}</span>
       {% else %}
-        <span class="score-badge bg-red-100 text-red-800">{{ job.tier3_score | int }}</span>
+        <span class="score-badge bg-red-100 text-red-800">{{ job.t3_score | int }}</span>
       {% endif %}
     {% else %}
       <span class="score-badge bg-gray-100 text-gray-400">—</span>

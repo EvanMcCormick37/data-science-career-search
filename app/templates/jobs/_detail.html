@@ -47,42 +47,81 @@
 
   <!-- Scores -->
   <div class="border border-gray-100 rounded-lg p-3 bg-gray-50 flex flex-col gap-2">
+
+    <!-- T2 -->
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium text-gray-500 w-6">T2</span>
-      {% if job.tier2_score is not none %}
-        {% if job.tier2_score >= 75 %}
-          <span class="score-badge bg-green-100 text-green-800">{{ job.tier2_score | int }}</span>
-        {% elif job.tier2_score >= 50 %}
-          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier2_score | int }}</span>
+      <span class="text-xs font-medium text-gray-500 w-12">T2</span>
+      {% if job.t2_score is not none %}
+        {% if job.t2_score >= 75 %}
+          <span class="score-badge bg-green-100 text-green-800">{{ job.t2_score | int }}</span>
+        {% elif job.t2_score >= 50 %}
+          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.t2_score | int }}</span>
         {% else %}
-          <span class="score-badge bg-red-100 text-red-800">{{ job.tier2_score | int }}</span>
+          <span class="score-badge bg-red-100 text-red-800">{{ job.t2_score | int }}</span>
         {% endif %}
-        {% if job.tier2_explanation %}
-        <span class="text-xs text-gray-600 flex-1">{{ job.tier2_explanation }}</span>
+        {% if job.t2_explanation %}
+        <span class="text-xs text-gray-600 flex-1">{{ job.t2_explanation }}</span>
         {% endif %}
       {% else %}
         <span class="score-badge bg-gray-100 text-gray-400">—</span>
         <span class="text-xs text-gray-400">Not yet scored</span>
       {% endif %}
     </div>
+
+    <!-- T3 -->
+    {% if job.t3_score is not none %}
     <div class="flex items-center gap-2">
-      <span class="text-xs font-medium text-gray-500 w-6">T3</span>
-      {% if job.tier3_score is not none %}
-        {% if job.tier3_score >= 75 %}
-          <span class="score-badge bg-green-100 text-green-800">{{ job.tier3_score | int }}</span>
-        {% elif job.tier3_score >= 50 %}
-          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.tier3_score | int }}</span>
-        {% else %}
-          <span class="score-badge bg-red-100 text-red-800">{{ job.tier3_score | int }}</span>
-        {% endif %}
-        {% if job.tier3_explanation %}
-        <span class="text-xs text-gray-600 flex-1">{{ job.tier3_explanation }}</span>
-        {% endif %}
+      <span class="text-xs font-medium text-gray-500 w-12">T3 match</span>
+      {% if job.t3_score >= 75 %}
+        <span class="score-badge bg-green-100 text-green-800">{{ job.t3_score }}</span>
+      {% elif job.t3_score >= 50 %}
+        <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.t3_score }}</span>
       {% else %}
-        <span class="score-badge bg-gray-100 text-gray-400">—</span>
-        <span class="text-xs text-gray-400 italic">Deep analysis not yet run</span>
+        <span class="score-badge bg-red-100 text-red-800">{{ job.t3_score }}</span>
       {% endif %}
     </div>
+    {% if job.t3_qualification is not none %}
+    <div class="pl-4 flex flex-col gap-1 border-l-2 border-gray-200">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-400 w-8">qual</span>
+        {% if job.t3_qualification >= 70 %}
+          <span class="score-badge bg-green-100 text-green-800">{{ job.t3_qualification | int }}</span>
+        {% elif job.t3_qualification >= 50 %}
+          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.t3_qualification | int }}</span>
+        {% else %}
+          <span class="score-badge bg-red-100 text-red-800">{{ job.t3_qualification | int }}</span>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-400 w-8">fit</span>
+        {% if job.t3_fit >= 70 %}
+          <span class="score-badge bg-green-100 text-green-800">{{ job.t3_fit | int }}</span>
+        {% elif job.t3_fit >= 40 %}
+          <span class="score-badge bg-yellow-100 text-yellow-800">{{ job.t3_fit | int }}</span>
+        {% else %}
+          <span class="score-badge bg-red-100 text-red-800">{{ job.t3_fit | int }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if job.t3_explanation %}
+    <div x-data="{ open: false }" class="mt-0.5">
+      <button @click="open = !open"
+              class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+        <span x-text="open ? 'Hide analysis ▲' : 'Show analysis ▼'">Show analysis ▼</span>
+      </button>
+      <div x-show="open" x-cloak
+           class="mt-1.5 text-xs text-gray-600 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">{{ job.t3_explanation }}</div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-medium text-gray-500 w-12">T3</span>
+      <span class="score-badge bg-gray-100 text-gray-400">—</span>
+      <span class="text-xs text-gray-400 italic">Deep analysis not yet run</span>
+    </div>
+    {% endif %}
+
   </div>
 
   <!-- Skills & Frameworks -->
