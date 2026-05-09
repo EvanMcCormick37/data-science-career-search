@@ -39,19 +39,18 @@ Base your score entirely on demonstrated skills, depth of experience, and backgr
 versus the job's stated requirements.  Do NOT consider the candidate's preferences,
 location, compensation needs, or whether they would enjoy the job.
 
-Be harsh and maximally differentiated, especially above 60.  The purpose of this
+Be harsh and maximally differentiated.  The purpose of this
 score is to separate candidates at the top end — returning 70–85 for every job is
 useless.  The job market is extremely competitive; assume the candidate is competing
 against strong applicants.
 
 Scoring guide:
-  85–100  Exceptional — Candidate meets or exceeds all requirements; likely a top pick.
-           Reserve 90+ for roles where the candidate is genuinely overqualified.
-  70–84   Strong — Candidate meets most requirements; gaps are minor or incidental.
-  55–69   Adequate — Candidate meets the core requirements but has notable gaps in key areas.
-  40–54   Weak — Meaningful gaps; the candidate would need to stretch significantly.
-  20–39   Poor — Missing critical qualifications; unlikely to progress past screening.
-  1–19    Very poor — Substantially underqualified; application would be rejected immediately.
+  90–100  Reserve 90+ for roles where the candidate is genuinely overqualified.       
+  75–89   Exceptional — Candidate meets or exceeds all requirements; likely a top pick.
+  55–74   Strong — Candidate meets most requirements; gaps are minor or incidental.
+  40–54   Adequate — Candidate meets the core requirements but has notable gaps in key areas.
+  20–39   Weak — Meaningful gaps; the candidate would need to stretch significantly.
+  1–19    Poor — Missing critical qualifications; unlikely to progress past screening.
 
 ────────────────────────────────────────────────────────────────
 EVALUATION 2 — FIT SCORE (1–100)
