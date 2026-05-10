@@ -39,6 +39,81 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 logger = logging.getLogger("apply_taxonomy")
 
 
+def _resolve_merge_chains(
+    promote_list: list[dict],
+    merge_list: list[dict],
+    delete_list: list[dict],
+) -> list[dict]:
+    """
+    Defensive guard that mirrors the generation-time check.
+    Collapses A→B→C chains, promotes cycle participants, and promotes sources
+    whose chain ends at a deleted entry.  Mutates promote_list in place.
+    """
+    delete_ids  = {e["id"] for e in delete_list}
+    merge_by_id = {e["id"]: e for e in merge_list}
+
+    cycle_nodes: set[int] = set()
+    processed:   set[int] = set()
+    for start_id in list(merge_by_id):
+        if start_id in processed:
+            continue
+        path:     list[int] = []
+        path_set: set[int]  = set()
+        node_id = start_id
+        while node_id in merge_by_id and node_id not in processed:
+            if node_id in path_set:
+                cycle_nodes.update(path[path.index(node_id):])
+                break
+            path.append(node_id)
+            path_set.add(node_id)
+            node_id = merge_by_id[node_id]["into_id"]
+        processed.update(path)
+
+    if cycle_nodes:
+        names = [merge_by_id[cid]["name"] for cid in cycle_nodes if cid in merge_by_id]
+        logger.warning(f"Circular merge dependencies found — promoting instead: {names}")
+
+    def _follow(start_id: int) -> tuple[int, str, str] | None:
+        node_id = start_id
+        visited: set[int] = {node_id}
+        while True:
+            entry    = merge_by_id[node_id]
+            tgt_id   = entry["into_id"]
+            tgt_name = entry["into_name"]
+            tgt_kind = entry["into_kind"]
+            if tgt_id in delete_ids:
+                return None
+            if tgt_id not in merge_by_id or tgt_id in cycle_nodes or tgt_id in visited:
+                return tgt_id, tgt_name, tgt_kind
+            visited.add(tgt_id)
+            node_id = tgt_id
+
+    resolved: list[dict] = []
+    for entry in merge_list:
+        src_id = entry["id"]
+        if src_id in cycle_nodes:
+            promote_list.append({"id": src_id, "name": entry["name"], "kind": entry["kind"]})
+            continue
+        terminal = _follow(src_id)
+        if terminal is None:
+            logger.warning(
+                f"Merge chain for {entry['name']!r} (id={src_id}) ends at a deleted entry "
+                "— promoting instead"
+            )
+            promote_list.append({"id": src_id, "name": entry["name"], "kind": entry["kind"]})
+            continue
+        final_id, final_name, final_kind = terminal
+        resolved.append({**entry, "into_id": final_id, "into_name": final_name, "into_kind": final_kind})
+
+    return resolved
+
+
+def _flush_plan(promote_list: list, merge_list: list, delete_list: list) -> None:
+    """Persist the current (partially-consumed) plan back to disk."""
+    plan = {"promote": promote_list, "merge": merge_list, "delete": delete_list}
+    PENDING_TAXONOMY_PATH.write_text(json.dumps(plan, indent=2), encoding="utf-8")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Apply pending taxonomy changes.")
     p.add_argument("--execute", action="store_true", help="Apply changes (default: dry run)")
@@ -53,37 +128,49 @@ def main() -> None:
     merge_list   = plan.get("merge",   [])
     delete_list  = plan.get("delete",  [])
 
+    merge_list = _resolve_merge_chains(promote_list, merge_list, delete_list)
+
     dry = not args.execute
     mode = "DRY RUN" if dry else "EXECUTE"
     logger.info(f"=== Apply taxonomy changes ({mode}) ===")
     logger.info(f"  promote={len(promote_list)}, merge={len(merge_list)}, delete={len(delete_list)}\n")
 
-    for entry in promote_list:
+    for entry in list(promote_list):
         logger.info(f"  PROMOTE [{entry['kind']}] (id={entry['id']}) {entry['name']!r}")
         if not dry:
             if entry["kind"] == "skill":
                 mark_skill_promoted(entry["id"])
             else:
                 mark_framework_promoted(entry["id"])
+            promote_list.remove(entry)
+            _flush_plan(promote_list, merge_list, delete_list)
 
-    for entry in merge_list:
+    for entry in list(merge_list):
         logger.info(
             f"  MERGE   [{entry['kind']}] (id={entry['id']}) {entry['name']!r}"
             f" → (id={entry['into_id']}) {entry['into_name']!r}"
         )
         if not dry:
-            if entry["kind"] == "skill":
-                merge_skill(entry["id"], entry["into_id"])
-            else:
-                merge_framework(entry["id"], entry["into_id"])
+            try:
+                if entry["kind"] == "skill":
+                    merge_skill(entry["id"], entry["into_id"])
+                else:
+                    merge_framework(entry["id"], entry["into_id"])
+            except ValueError as exc:
+                # Candidate row already gone (e.g. re-run after a partial crash).
+                logger.warning(f"  (already applied, skipping — {exc})")
+            merge_list.remove(entry)
+            _flush_plan(promote_list, merge_list, delete_list)
 
-    for entry in delete_list:
+    for entry in list(delete_list):
         logger.info(f"  DELETE  [{entry['kind']}] (id={entry['id']}) {entry['name']!r}")
         if not dry:
             if entry["kind"] == "skill":
                 discard_skill(entry["id"])
             else:
                 discard_framework(entry["id"])
+            delete_list.remove(entry)
+            _flush_plan(promote_list, merge_list, delete_list)
 
     if dry:
         logger.info(f"\nDry run complete. Re-run with --execute to apply.")

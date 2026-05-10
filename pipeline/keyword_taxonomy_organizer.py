@@ -209,6 +209,90 @@ def _process_kind(
     return promote_list, merge_list, delete_list
 
 
+def _resolve_merge_chains(
+    promote_list: list[dict],
+    merge_list: list[dict],
+    delete_list: list[dict],
+) -> list[dict]:
+    """
+    Clean up the raw merge list before writing the plan:
+
+      1. Collapse chains — A→B→C becomes A→C so every merge points directly
+         at a terminal (canonical or promoted) entry.
+      2. Detect cycles — all participants are demoted to PROMOTE so no entry
+         disappears without its references being preserved.
+      3. Skip dead-end chains — if the terminal is being deleted, promote the
+         source instead of merging into a soon-to-be-absent target.
+
+    Mutates promote_list in place. Returns the cleaned merge_list.
+    """
+    delete_ids  = {e["id"] for e in delete_list}
+    merge_by_id = {e["id"]: e for e in merge_list}
+
+    # --- detect all nodes that are part of a cycle ---
+    cycle_nodes: set[int] = set()
+    processed:   set[int] = set()
+    for start_id in list(merge_by_id):
+        if start_id in processed:
+            continue
+        path:     list[int] = []
+        path_set: set[int]  = set()
+        node_id = start_id
+        while node_id in merge_by_id and node_id not in processed:
+            if node_id in path_set:
+                cycle_nodes.update(path[path.index(node_id):])
+                break
+            path.append(node_id)
+            path_set.add(node_id)
+            node_id = merge_by_id[node_id]["into_id"]
+        processed.update(path)
+
+    if cycle_nodes:
+        names = [merge_by_id[cid]["name"] for cid in cycle_nodes if cid in merge_by_id]
+        logger.warning(f"Circular merge dependencies detected — promoting instead: {names}")
+
+    def _follow(start_id: int) -> tuple[int, str, str] | None:
+        """Walk the chain from start_id to its terminal target.
+        Returns (final_id, final_name, final_kind) or None if terminal is deleted."""
+        node_id = start_id
+        visited: set[int] = {node_id}
+        while True:
+            entry    = merge_by_id[node_id]
+            tgt_id   = entry["into_id"]
+            tgt_name = entry["into_name"]
+            tgt_kind = entry["into_kind"]
+            if tgt_id in delete_ids:
+                return None
+            # Stop at: canonical, cycle node, or already-visited (shouldn't happen
+            # after cycle detection, but guards against unexpected shapes)
+            if tgt_id not in merge_by_id or tgt_id in cycle_nodes or tgt_id in visited:
+                return tgt_id, tgt_name, tgt_kind
+            visited.add(tgt_id)
+            node_id = tgt_id
+
+    resolved: list[dict] = []
+    for entry in merge_list:
+        src_id = entry["id"]
+
+        if src_id in cycle_nodes:
+            promote_list.append({"id": src_id, "name": entry["name"], "kind": entry["kind"]})
+            continue
+
+        terminal = _follow(src_id)
+        if terminal is None:
+            logger.warning(
+                f"Merge chain for {entry['name']!r} (id={src_id}) ends at a deleted entry "
+                "— promoting instead"
+            )
+            promote_list.append({"id": src_id, "name": entry["name"], "kind": entry["kind"]})
+            continue
+
+        final_id, final_name, final_kind = terminal
+        resolved.append({**entry, "into_id": final_id, "into_name": final_name, "into_kind": final_kind})
+
+    return resolved
+
+
 class KeywordTaxonomyOrganizer:
     def __init__(self) -> None:
         self._embedder = Embedder()
@@ -264,6 +348,7 @@ class KeywordTaxonomyOrganizer:
             merge_list.extend(m)
             delete_list.extend(d)
 
+        merge_list = _resolve_merge_chains(promote_list, merge_list, delete_list)
         plan = {"promote": promote_list, "merge": merge_list, "delete": delete_list}
         PENDING_TAXONOMY_PATH.write_text(json.dumps(plan, indent=2), encoding="utf-8")
         logger.info(

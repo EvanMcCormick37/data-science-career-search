@@ -430,6 +430,13 @@ def merge_skill(candidate_id: int, canonical_id: int) -> None:
                 raise ValueError(f"skill_id {candidate_id} not found")
             candidate_name = row[0]
 
+            # Jobs that already have the canonical skill would violate the PK
+            # on update; delete those duplicates first, then remap the rest.
+            cur.execute(
+                "DELETE FROM job_skills WHERE skill_id = %s"
+                " AND job_id IN (SELECT job_id FROM job_skills WHERE skill_id = %s)",
+                (candidate_id, canonical_id),
+            )
             cur.execute(
                 "UPDATE job_skills SET skill_id = %s WHERE skill_id = %s",
                 (canonical_id, candidate_id),
@@ -450,6 +457,11 @@ def merge_framework(candidate_id: int, canonical_id: int) -> None:
                 raise ValueError(f"framework_id {candidate_id} not found")
             candidate_name = row[0]
 
+            cur.execute(
+                "DELETE FROM job_frameworks WHERE framework_id = %s"
+                " AND job_id IN (SELECT job_id FROM job_frameworks WHERE framework_id = %s)",
+                (candidate_id, canonical_id),
+            )
             cur.execute(
                 "UPDATE job_frameworks SET framework_id = %s WHERE framework_id = %s",
                 (canonical_id, candidate_id),
