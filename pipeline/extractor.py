@@ -28,7 +28,8 @@ import json
 import logging
 from functools import lru_cache
 
-from config.settings import EXTRACTION_MODEL, SKILLS_MD_PATH, FRAMEWORKS_MD_PATH
+from config.settings import EXTRACTION_MODEL
+from db.operations import get_taxonomy_prompt_text
 from llm.client import complete_json
 
 logger = logging.getLogger(__name__)
@@ -112,8 +113,8 @@ _FEW_SHOT = [
 
 @lru_cache(maxsize=1)
 def _build_system_prompt() -> str:
-    skills_text     = SKILLS_MD_PATH.read_text(encoding="utf-8")
-    frameworks_text = FRAMEWORKS_MD_PATH.read_text(encoding="utf-8")
+    skills_text     = get_taxonomy_prompt_text("skills")
+    frameworks_text = get_taxonomy_prompt_text("frameworks")
     return f"""You are a structured data extractor for job listings.
 
 Your task: extract metadata from a job description and return it as JSON.
@@ -121,8 +122,15 @@ Your task: extract metadata from a job description and return it as JSON.
 Output schema (use null for any field not clearly stated in the listing — never guess):
 {_EXTRACTION_SCHEMA}
 
+Definitions:
+- A SKILL is a competency or ability without a proper name — it describes what someone can do.
+  Examples: "Predictive Modeling", "Data Cleaning", "System Design", "Statistical Analysis"
+- A FRAMEWORK is a tool, language, library, service, platform, or software with a proper name.
+  Examples: "Python", "TensorFlow", "AWS", "PostgreSQL", "React", "Apache Spark"
+- If something has a proper name, it always goes in frameworks, never in skills.
+
 Rules:
-- skills and frameworks must use canonical names from the taxonomy below where possible.
+- Use canonical names from the taxonomies below where possible.
   If a skill or tool is not in the taxonomy, include it as-is — the normaliser handles it.
 - Return empty lists [] for skills/frameworks if none are mentioned, never null.
 - salary_min/max must be integers (no decimals, no currency symbols).

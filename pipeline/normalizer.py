@@ -76,6 +76,55 @@ class Normalizer:
                 seen.add(fid)
         return result
 
+    def normalize_all(
+        self, skill_names: list[str], framework_names: list[str]
+    ) -> tuple[list[int], list[int]]:
+        """
+        Normalize skills and frameworks together with cross-table routing.
+
+        Step 0: if a name tagged as a skill matches a framework canonical or alias
+        (or vice versa), it is silently routed to the correct table instead of
+        being inserted as a candidate in the wrong one.
+
+        Returns (skill_ids, framework_ids).
+        """
+        skill_ids: list[int] = []
+        framework_ids: list[int] = []
+        seen_skills: set[int] = set()
+        seen_frameworks: set[int] = set()
+
+        for name in skill_names:
+            key = name.strip().lower()
+            if not key:
+                continue
+            fid = self._framework_alias.get(key) or self._framework_name.get(key)
+            if fid is not None:
+                if fid not in seen_frameworks:
+                    framework_ids.append(fid)
+                    seen_frameworks.add(fid)
+                continue
+            sid = self._resolve_skill(name)
+            if sid is not None and sid not in seen_skills:
+                skill_ids.append(sid)
+                seen_skills.add(sid)
+
+        for name in framework_names:
+            key = name.strip().lower()
+            if not key:
+                continue
+            sid = self._skill_alias.get(key) or self._skill_name.get(key)
+            if sid is not None:
+                if sid not in seen_skills:
+                    skill_ids.append(sid)
+                    seen_skills.add(sid)
+                continue
+            fid = self._resolve_framework(name)
+            if fid is not None and fid not in seen_frameworks:
+                framework_ids.append(fid)
+                seen_frameworks.add(fid)
+
+        return skill_ids, framework_ids
+
     # ── Internal ──────────────────────────────────────────────────────────
 
     def _resolve_skill(self, name: str) -> int | None:

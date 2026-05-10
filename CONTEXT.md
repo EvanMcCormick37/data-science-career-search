@@ -124,8 +124,6 @@ data-science-career-search/
 │   └── teardown.sh              # Teardown script
 ├── data/
 │   ├── career_profile.md        # Resume/career profile (required for scoring)
-│   ├── skills.md                # Skill taxonomy reference (included in extraction prompt)
-│   ├── frameworks.md            # Framework taxonomy reference (included in extraction prompt)
 │   └── resumes/                 # Resume files for application tracking (PDFs/Markdown)
 ├── models/                      # sentence-transformers cache (gitignored)
 ├── scratch/                     # Exploratory notebooks (gitignored)

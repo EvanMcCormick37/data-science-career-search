@@ -75,6 +75,10 @@ def main() -> None:
         f"total_active={active_count}"
     )
 
+    # ── Step 4: consolidate candidate taxonomy entries ────────────────────
+    from pipeline.keyword_taxonomy_organizer import KeywordTaxonomyOrganizer
+    KeywordTaxonomyOrganizer().consolidate_candidates()
+
 
 if __name__ == "__main__":
     main()

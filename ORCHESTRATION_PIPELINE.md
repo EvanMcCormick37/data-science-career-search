@@ -539,8 +539,6 @@ data-science-career-search/
 │       └── test_orchestrator.py
 ├── data/
 │   ├── career_profile.md
-│   ├── skills.md
-│   └── frameworks.md
 ├── models/                    # gitignored; mounted as block volume in cloud
 ├── Dockerfile
 ├── docker-compose.yml

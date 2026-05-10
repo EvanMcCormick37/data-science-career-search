@@ -279,6 +279,121 @@ def get_candidate_frameworks() -> list[dict]:
             return [dict(row) for row in cur.fetchall()]
 
 
+def get_candidate_skills_above_threshold(min_jobs: int) -> list[dict]:
+    """Return candidate skills referenced by at least min_jobs jobs, ordered by frequency."""
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT s.skill_id, s.name, COUNT(js.job_id) AS job_count
+                FROM skills s
+                LEFT JOIN job_skills js ON s.skill_id = js.skill_id
+                WHERE s.is_candidate = 1
+                GROUP BY s.skill_id, s.name
+                HAVING COUNT(js.job_id) >= %s
+                ORDER BY job_count DESC
+                """,
+                (min_jobs,),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+
+def get_candidate_frameworks_above_threshold(min_jobs: int) -> list[dict]:
+    """Return candidate frameworks referenced by at least min_jobs jobs, ordered by frequency."""
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT f.framework_id, f.name, COUNT(jf.job_id) AS job_count
+                FROM frameworks f
+                LEFT JOIN job_frameworks jf ON f.framework_id = jf.framework_id
+                WHERE f.is_candidate = 1
+                GROUP BY f.framework_id, f.name
+                HAVING COUNT(jf.job_id) >= %s
+                ORDER BY job_count DESC
+                """,
+                (min_jobs,),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+
+def get_all_canonical_skills() -> list[dict]:
+    """Return all canonical (non-candidate) skills as {skill_id, name}."""
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT skill_id, name FROM skills WHERE is_candidate = 0 ORDER BY name"
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+
+def get_all_canonical_frameworks() -> list[dict]:
+    """Return all canonical (non-candidate) frameworks as {framework_id, name}."""
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT framework_id, name FROM frameworks WHERE is_candidate = 0 ORDER BY name"
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+
+def get_taxonomy_prompt_text(kind: str) -> str:
+    """
+    Generate a formatted taxonomy block for use in the extraction system prompt.
+    Groups canonical entries by domain for readability.
+    kind must be 'skills' or 'frameworks'.
+    """
+    with connection() as conn:
+        with conn.cursor() as cur:
+            if kind == "skills":
+                cur.execute(
+                    """
+                    SELECT COALESCE(domain, 'Other') AS domain, name
+                    FROM skills WHERE is_candidate = 0
+                    ORDER BY domain NULLS LAST, name
+                    """
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT COALESCE(domain, 'Other') AS domain, name
+                    FROM frameworks WHERE is_candidate = 0
+                    ORDER BY domain NULLS LAST, name
+                    """
+                )
+            rows = cur.fetchall()
+
+    grouped: dict[str, list[str]] = {}
+    for domain, name in rows:
+        grouped.setdefault(domain, []).append(name)
+
+    parts = []
+    for domain, names in grouped.items():
+        parts.append(f"### {domain}")
+        parts.append(", ".join(names))
+    return "\n".join(parts)
+
+
+def mark_skill_promoted(skill_id: int) -> None:
+    """Promote a candidate skill without assigning taxonomy placement fields."""
+    with connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE skills SET is_candidate = 0 WHERE skill_id = %s",
+                (skill_id,),
+            )
+
+
+def mark_framework_promoted(framework_id: int) -> None:
+    """Promote a candidate framework without assigning taxonomy placement fields."""
+    with connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE frameworks SET is_candidate = 0 WHERE framework_id = %s",
+                (framework_id,),
+            )
+
+
 def promote_skill(skill_id: int, domain: str, core_competency: str, competency: str) -> None:
     with connection() as conn:
         with conn.cursor() as cur:

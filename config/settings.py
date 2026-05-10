@@ -19,8 +19,6 @@ CONFIG_DIR = ROOT_DIR / "config"
 MODELS_DIR = ROOT_DIR / "models"
 
 RESUME_PATH          = DATA_DIR / "career_profile.md"
-SKILLS_MD_PATH       = DATA_DIR / "skills.md"
-FRAMEWORKS_MD_PATH   = DATA_DIR / "frameworks.md"
 QUERIES_PATH         = CONFIG_DIR / "queries.yaml"
 
 # ── Database ───────────────────────────────────────────────────────────────
@@ -67,3 +65,9 @@ TIER3_AUTO_SCORE_MIN:  int = int(os.getenv("TIER3_AUTO_SCORE_MIN",  "70"))
 DAILY_MAX_PAGES:       int = int(os.getenv("DAILY_MAX_PAGES",       "1"))
 BACKFILL_MAX_PAGES:    int = int(os.getenv("BACKFILL_MAX_PAGES",    "10"))
 JOB_EXPIRY_DAYS:       int = int(os.getenv("JOB_EXPIRY_DAYS",       "30"))
+
+# ── Taxonomy candidate review ──────────────────────────────────────────────
+CANDIDATE_MIN_JOBS:     int = int(os.getenv("CANDIDATE_MIN_JOBS",     "3"))
+CANDIDATE_REVIEW_TOP_K: int = int(os.getenv("CANDIDATE_REVIEW_TOP_K", "8"))
+CANDIDATE_REVIEW_MODEL: str = os.getenv("CANDIDATE_REVIEW_MODEL", os.getenv("SCORING_MODEL", "google/gemini-flash-1.5"))
+PENDING_TAXONOMY_PATH        = DATA_DIR / "pending_taxonomy_changes.json"

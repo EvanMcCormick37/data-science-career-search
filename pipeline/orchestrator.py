@@ -109,8 +109,10 @@ class Orchestrator:
                 continue
 
             # ── 3. Normalize skills & frameworks ──────────────────────────
-            skill_ids     = self._normalizer.normalize_skills(extraction.pop("skills", []))
-            framework_ids = self._normalizer.normalize_frameworks(extraction.pop("frameworks", []))
+            skill_ids, framework_ids = self._normalizer.normalize_all(
+                extraction.pop("skills", []),
+                extraction.pop("frameworks", []),
+            )
 
             # ── 4. Compose full job record ────────────────────────────────
             job_record = {
@@ -213,8 +215,10 @@ class Orchestrator:
                 stats["failed"] += 1
                 continue
 
-            skill_ids     = self._normalizer.normalize_skills(extraction.pop("skills", []))
-            framework_ids = self._normalizer.normalize_frameworks(extraction.pop("frameworks", []))
+            skill_ids, framework_ids = self._normalizer.normalize_all(
+                extraction.pop("skills", []),
+                extraction.pop("frameworks", []),
+            )
 
             job_record = {
                 "title":            job.get("title", ""),
