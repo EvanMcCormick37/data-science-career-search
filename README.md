@@ -18,7 +18,7 @@ SerpAPI → Dedup → Extract → Normalize → Embed → Score → Store
                           FastAPI Dashboard (jobs / applications / config)
 ```
 
-Both the pipeline and dashboard share a single database and SQL layer (`db/operations.py`). The dashboard never triggers ingestion; the pipeline never imports from `app/`.
+Both the pipeline and dashboard share a single database and a focused SQL layer (`db/jobs.py`, `db/taxonomy.py`, `db/applications.py`). The dashboard never triggers ingestion; the pipeline never imports from `app/`.
 
 ## Scoring tiers
 
@@ -37,7 +37,7 @@ Default `β = 0.2` — qualification dominates; fit only discounts.
 pipeline/        # fetch → dedup → extract → normalize → embed → score → store
 matching/        # tier1 (vector), tier2 (cheap LLM), tier3 (expensive LLM)
 app/             # FastAPI dashboard (routes / services / templates)
-db/              # schema, connection pool, all SQL (operations.py)
+db/              # schema, connection pool, SQL split by domain (jobs/taxonomy/applications)
 scripts/         # CLI entry points (daily_run, backfill, score_top_jobs, …)
 config/          # settings.py + queries.yaml (search definitions)
 data/            # career_profile.md, skills/frameworks taxonomy, resumes/

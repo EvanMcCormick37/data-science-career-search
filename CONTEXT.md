@@ -7,7 +7,7 @@ A Python-based job search system with two entry points:
 1. **CLI pipeline** — ingests job listings from SerpAPI (Google Jobs), extracts structured metadata via a cheap LLM, scores every job for career fit, and stores results in PostgreSQL with pgvector.
 2. **Local dashboard** — a FastAPI web app for browsing jobs, tracking applications, and editing config.
 
-Both systems share one database and one SQL layer (`db/operations.py`). The pipeline is entirely CLI-driven; the dashboard reads and writes through the same operations layer without importing any pipeline code.
+Both systems share one database and a focused SQL layer (`db/jobs.py`, `db/taxonomy.py`, `db/applications.py`). The pipeline is entirely CLI-driven; the dashboard reads and writes through the same DB layer without importing any pipeline code.
 
 ---
 
@@ -75,6 +75,8 @@ data-science-career-search/
 │   ├── scorer.py                # Ingestion-time fit scoring (cheap LLM)
 │   └── orchestrator.py          # Orchestrates fetch → store; triggers auto tier3
 ├── matching/
+│   ├── career_profile.py        # Load/cache data/career_profile.md — single home for all callers
+│   ├── scoring.py               # Shared tier-2 system prompt + message builder
 │   ├── tier1_vector.py          # pgvector cosine similarity search
 │   ├── tier2_cheap_llm.py       # Async batch cheap LLM scoring
 │   └── tier3_deep_analysis.py   # Expensive LLM deep fit analysis
@@ -276,12 +278,12 @@ where `β = FITNESS_WEIGHT` (default 0.2). A qualification of 0 collapses the ma
 ```
 Routes (app/routes/)          — parse input, call service, return HTML
     ↓
-Services (app/services/)      — compose db/operations calls + file I/O
+Services (app/services/)      — query composition, business logic, file I/O
     ↓
-db/operations.py              — all SQL (shared with pipeline)
+db/jobs.py · db/taxonomy.py · db/applications.py  — all SQL (shared with pipeline)
 ```
 
-The dashboard must be deletable without touching `db/operations.py`. If `app/` is deleted, the pipeline still works.
+The dashboard must be deletable without touching the `db/` SQL modules. If `app/` is deleted, the pipeline still works.
 
 ### Pages
 

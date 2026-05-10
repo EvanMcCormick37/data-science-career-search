@@ -7,7 +7,7 @@ A Python-based job search system with two entry points:
 1. **CLI pipeline** — ingests job listings from SerpAPI (Google Jobs), extracts structured metadata via a cheap LLM, scores every job for career fit, and stores results in PostgreSQL with pgvector.
 2. **Local dashboard** — a FastAPI web app for browsing jobs, tracking applications, and editing config.
 
-Both systems share one database and one SQL layer (`db/operations.py`). The pipeline is entirely CLI-driven; the dashboard reads and writes through the same operations layer without importing any pipeline code.
+Both systems share one database and a focused SQL layer (`db/jobs.py`, `db/taxonomy.py`, `db/applications.py`). The pipeline is entirely CLI-driven; the dashboard reads and writes through the same DB layer without importing any pipeline code.
 
 ---
 
@@ -75,6 +75,8 @@ data-science-career-search/
 │   ├── scorer.py                # Ingestion-time fit scoring (cheap LLM)
 │   └── orchestrator.py          # Orchestrates fetch → store; triggers auto tier3
 ├── matching/
+│   ├── career_profile.py        # Load/cache data/career_profile.md — single home for all callers
+│   ├── scoring.py               # Shared tier-2 system prompt + message builder
 │   ├── tier1_vector.py          # pgvector cosine similarity search
 │   ├── tier2_cheap_llm.py       # Async batch cheap LLM scoring
 │   └── tier3_deep_analysis.py   # Expensive LLM deep fit analysis
@@ -83,7 +85,10 @@ data-science-career-search/
 ├── db/
 │   ├── schema.sql               # Full DDL (idempotent; run via seed.py)
 │   ├── connection.py            # Threaded psycopg2 connection pool
-│   ├── operations.py            # All SQL reads/writes (no raw SQL elsewhere)
+│   ├── jobs.py                  # SQL for jobs table: insert, score updates, expiry, reprocess, fetch
+│   ├── taxonomy.py              # SQL for skills/frameworks: candidates, promotion, merge, discard
+│   ├── applications.py          # SQL for applications: create, update, listing, stats
+│   ├── operations.py            # Re-export shim — import from the modules above instead
 │   ├── migrations/              # Incremental schema changes (001–004)
 │   └── seed/
 │       ├── seed.py              # Bootstrap: runs schema.sql + seeds taxonomy CSVs
@@ -273,12 +278,12 @@ where `β = FITNESS_WEIGHT` (default 0.2). A qualification of 0 collapses the ma
 ```
 Routes (app/routes/)          — parse input, call service, return HTML
     ↓
-Services (app/services/)      — compose db/operations calls + file I/O
+Services (app/services/)      — query composition, business logic, file I/O
     ↓
-db/operations.py              — all SQL (shared with pipeline)
+db/jobs.py · db/taxonomy.py · db/applications.py  — all SQL (shared with pipeline)
 ```
 
-The dashboard must be deletable without touching `db/operations.py`. If `app/` is deleted, the pipeline still works.
+The dashboard must be deletable without touching the `db/` SQL modules. If `app/` is deleted, the pipeline still works.
 
 ### Pages
 
@@ -356,7 +361,7 @@ The nav bar shows pipeline freshness (last ingestion time, active job count, app
 
 ## Design Invariants
 
-- **`db/operations.py` is the only place SQL lives.** Pipeline modules and dashboard services both call into it; neither writes SQL directly.
+- **All SQL lives in `db/jobs.py`, `db/taxonomy.py`, or `db/applications.py`.** Pipeline modules and dashboard services call into these; neither writes SQL directly. `db/operations.py` is a re-export shim for backward compatibility only.
 - **The dashboard does not import from `pipeline/` or `matching/`.** Deleting `app/` leaves the pipeline fully intact.
 - **`serp_api_json` is always stored.** Re-extraction is possible without re-fetching from SerpAPI.
 - **`jobs.status` and `applications.state` are orthogonal.** `jobs.status` tracks whether the listing is still live; `applications.state` tracks your candidacy progress. They update independently.
