@@ -22,16 +22,18 @@ from typing import Sequence
 from tqdm import tqdm
 
 from config.settings import TIER3_AUTO_SCORE_MIN
-from db.operations import (
+from db.jobs import (
     insert_job,
     mark_job_failed,
     get_jobs_for_reprocessing,
+    upsert_reprocessed_job,
 )
+from matching.career_profile import load as _load_career_profile
 from pipeline.dedup import Deduplicator
 from pipeline.embedder import Embedder
 from pipeline.extractor import Extractor
 from pipeline.normalizer import Normalizer
-from pipeline.scorer import IngestScorer, _load_career_profile
+from pipeline.scorer import IngestScorer
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +187,7 @@ class Orchestrator:
         Does not re-fetch from SerpAPI.
         """
         if job_ids is not None:
-            from db.operations import get_jobs_by_ids
+            from db.jobs import get_jobs_by_ids
             records = [
                 {
                     "job_id":       r["job_id"],
@@ -245,58 +247,7 @@ class Orchestrator:
             job_status = "bad_fit" if (fit_score is not None and fit_score < 50) else "active"
 
             try:
-                from db.connection import connection
-                with connection() as conn:
-                    with conn.cursor() as cur:
-                        import json as _json
-                        import psycopg2.extras
-                        cur.execute(
-                            """
-                            UPDATE jobs SET
-                                title = %(title)s,
-                                url = %(url)s,
-                                company_name = %(company_name)s,
-                                location = %(location)s,
-                                description = %(description)s,
-                                employment_type = %(employment_type)s,
-                                attendance = %(attendance)s,
-                                seniority = %(seniority)s,
-                                experience_years_min = %(experience_years_min)s,
-                                experience_years_max = %(experience_years_max)s,
-                                salary_min = %(salary_min)s,
-                                salary_max = %(salary_max)s,
-                                salary_currency = %(salary_currency)s,
-                                salary_period = %(salary_period)s,
-                                qualifications = %(qualifications)s,
-                                responsibilities = %(responsibilities)s,
-                                embedding = %(embedding)s::vector,
-                                status = %(job_status)s,
-                                date_updated = NOW()
-                            WHERE dedup_hash = %(dedup_hash)s
-                            """,
-                            {**job_record, "embedding": embedding, "job_status": job_status},
-                        )
-                        cur.execute(
-                            "SELECT job_id FROM jobs WHERE dedup_hash = %s",
-                            (record["dedup_hash"],),
-                        )
-                        row = cur.fetchone()
-                        if row:
-                            job_id = row[0]
-                            cur.execute("DELETE FROM job_skills WHERE job_id = %s", (job_id,))
-                            cur.execute("DELETE FROM job_frameworks WHERE job_id = %s", (job_id,))
-                            if skill_ids:
-                                psycopg2.extras.execute_values(
-                                    cur,
-                                    "INSERT INTO job_skills (job_id, skill_id) VALUES %s",
-                                    [(job_id, sid) for sid in skill_ids],
-                                )
-                            if framework_ids:
-                                psycopg2.extras.execute_values(
-                                    cur,
-                                    "INSERT INTO job_frameworks (job_id, framework_id) VALUES %s",
-                                    [(job_id, fid) for fid in framework_ids],
-                                )
+                upsert_reprocessed_job(job_record, embedding, skill_ids, framework_ids, job_status)
                 stats["reprocessed"] += 1
             except Exception as exc:
                 logger.error(f"Reprocess DB update failed: {exc}")

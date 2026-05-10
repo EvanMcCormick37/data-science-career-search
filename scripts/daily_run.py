@@ -26,7 +26,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import JOB_EXPIRY_DAYS
-from db.operations import expire_old_jobs, get_active_job_count
+from db.jobs import expire_old_jobs, get_active_job_count
 from pipeline.fetcher import fetch_jobs
 from pipeline.orchestrator import Orchestrator
 

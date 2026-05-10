@@ -23,7 +23,8 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from config.settings import DEEP_ANALYSIS_MODEL, RESUME_PATH
+from config.settings import DEEP_ANALYSIS_MODEL
+from matching.career_profile import load as _load_career_profile
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,17 +57,6 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def load_career_profile() -> str:
-    if not RESUME_PATH.exists():
-        logger.error(f"Career profile not found at {RESUME_PATH}.")
-        sys.exit(1)
-    text = RESUME_PATH.read_text(encoding="utf-8").strip()
-    if not text or "<!-- Fill in your" in text:
-        logger.error("data/career_profile.md is still a placeholder.")
-        sys.exit(1)
-    return text
-
-
 def print_results(results: list[dict], label: str) -> None:
     print(f"\n{'='*70}")
     print(f"{label} — {len(results)} job(s)  (model: {DEEP_ANALYSIS_MODEL})")
@@ -86,7 +76,7 @@ def print_results(results: list[dict], label: str) -> None:
 def main() -> None:
     args = parse_args()
 
-    from db.operations import get_active_t3_scored_jobs
+    from db.jobs import get_active_t3_scored_jobs
     jobs = get_active_t3_scored_jobs()
 
     if not jobs:
@@ -102,7 +92,10 @@ def main() -> None:
         print(f"\nRe-run without --dry-run to execute (--test-one to try just the first).\n")
         return
 
-    career_profile_text = load_career_profile()
+    career_profile_text = _load_career_profile()
+    if career_profile_text is None:
+        logger.error("Career profile not found or is still a placeholder.")
+        sys.exit(1)
 
     batch = jobs[:1] if args.test_one else jobs
     if args.test_one:

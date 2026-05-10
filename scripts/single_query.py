@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from db.operations import get_active_job_count
+from db.jobs import get_active_job_count
 from pipeline.fetcher import fetch_jobs
 from pipeline.orchestrator import Orchestrator
 

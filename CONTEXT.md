@@ -83,7 +83,10 @@ data-science-career-search/
 ├── db/
 │   ├── schema.sql               # Full DDL (idempotent; run via seed.py)
 │   ├── connection.py            # Threaded psycopg2 connection pool
-│   ├── operations.py            # All SQL reads/writes (no raw SQL elsewhere)
+│   ├── jobs.py                  # SQL for jobs table: insert, score updates, expiry, listing, detail
+│   ├── taxonomy.py              # SQL for skills/frameworks: candidates, promotion, merge, discard
+│   ├── applications.py          # SQL for applications: create, update, listing, stats
+│   ├── operations.py            # Re-export shim — import from the modules above instead
 │   ├── migrations/              # Incremental schema changes (001–004)
 │   └── seed/
 │       ├── seed.py              # Bootstrap: runs schema.sql + seeds taxonomy CSVs
@@ -356,7 +359,7 @@ The nav bar shows pipeline freshness (last ingestion time, active job count, app
 
 ## Design Invariants
 
-- **`db/operations.py` is the only place SQL lives.** Pipeline modules and dashboard services both call into it; neither writes SQL directly.
+- **All SQL lives in `db/jobs.py`, `db/taxonomy.py`, or `db/applications.py`.** Pipeline modules and dashboard services call into these; neither writes SQL directly. `db/operations.py` is a re-export shim for backward compatibility only.
 - **The dashboard does not import from `pipeline/` or `matching/`.** Deleting `app/` leaves the pipeline fully intact.
 - **`serp_api_json` is always stored.** Re-extraction is possible without re-fetching from SerpAPI.
 - **`jobs.status` and `applications.state` are orthogonal.** `jobs.status` tracks whether the listing is still live; `applications.state` tracks your candidacy progress. They update independently.

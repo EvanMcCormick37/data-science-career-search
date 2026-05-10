@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse
 
 from app.services.jobs import get_job_detail, list_jobs
 from app.templating import templates
-from db.operations import update_job_status
+from db.jobs import update_job_status
 
 router = APIRouter()
 

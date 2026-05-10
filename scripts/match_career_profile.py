@@ -27,7 +27,8 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from config.settings import RESUME_PATH, TIER1_CANDIDATES, TIER2_TOP_N
+from config.settings import TIER1_CANDIDATES, TIER2_TOP_N
+from matching.career_profile import load as _load_career_profile
 from pipeline.embedder import Embedder
 
 logging.basicConfig(
@@ -50,16 +51,6 @@ def parse_args() -> argparse.Namespace:
                    help="Write full results to a JSON file")
     return p.parse_args()
 
-
-def load_career_profile() -> str:
-    if not RESUME_PATH.exists():
-        logger.error(f"Resume not found at {RESUME_PATH}. Create data/career_profile.md first.")
-        sys.exit(1)
-    text = RESUME_PATH.read_text(encoding="utf-8").strip()
-    if not text or text.startswith("# Resume\n\n<!--"):
-        logger.error("data/career_profile.md is still a placeholder. Fill it in before running matching.")
-        sys.exit(1)
-    return text
 
 
 def parse_career_profile_for_embedding(career_profile_text: str) -> dict:
@@ -154,7 +145,10 @@ def print_tier3(jobs: list[dict]) -> None:
 
 def main() -> None:
     args = parse_args()
-    career_profile_text = load_career_profile()
+    career_profile_text = _load_career_profile()
+    if career_profile_text is None:
+        logger.error("Career profile not found or is still a placeholder. Create data/career_profile.md first.")
+        sys.exit(1)
     career_profile_dict = parse_career_profile_for_embedding(career_profile_text)
     persist     = not args.no_persist
     tier1_limit = args.top_k or TIER1_CANDIDATES

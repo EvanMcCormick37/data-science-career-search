@@ -10,7 +10,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from db.operations import expire_stale_applications, get_application_stats, get_freshness_stats
+from db.applications import expire_stale_applications, get_application_stats
+from db.jobs import get_freshness_stats
 
 app = FastAPI(title="Job Search Dashboard")
 

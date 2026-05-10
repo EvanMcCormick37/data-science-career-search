@@ -25,7 +25,7 @@ from config.settings import (
     CANDIDATE_REVIEW_TOP_K,
     PENDING_TAXONOMY_PATH,
 )
-from db.operations import (
+from db.taxonomy import (
     get_all_canonical_frameworks,
     get_all_canonical_skills,
     get_candidate_frameworks_above_threshold,

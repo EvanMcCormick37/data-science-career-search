@@ -1,11 +1,15 @@
 """
-Applications service layer — thin pass-through over db.operations.
+Applications service layer — thin pass-through over db.applications.
 Exists as the extension point for future business logic.
 """
 from __future__ import annotations
 
-import db.operations as _ops
-from db.operations import get_application_detail, list_applications, update_application
+from db.applications import (
+    create_application,
+    get_application_detail,
+    list_applications,
+    update_application,
+)
 
 __all__ = [
     "list_applications",
@@ -16,8 +20,5 @@ __all__ = [
 
 
 def log_application(**fields) -> int:
-    """
-    Create a new application record and return the new application_id.
-    Delegates to db.operations.create_application (dashboard version).
-    """
-    return _ops.create_application(**fields)
+    """Create a new application record and return the new application_id."""
+    return create_application(**fields)

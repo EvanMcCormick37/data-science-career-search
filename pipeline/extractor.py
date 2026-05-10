@@ -29,7 +29,7 @@ import logging
 from functools import lru_cache
 
 from config.settings import EXTRACTION_MODEL
-from db.operations import get_taxonomy_prompt_text
+from db.taxonomy import get_taxonomy_prompt_text
 from llm.client import complete_json
 
 logger = logging.getLogger(__name__)

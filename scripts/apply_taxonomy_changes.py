@@ -26,7 +26,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import PENDING_TAXONOMY_PATH
-from db.operations import (
+from db.taxonomy import (
     discard_framework,
     discard_skill,
     mark_framework_promoted,

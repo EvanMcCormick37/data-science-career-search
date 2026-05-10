@@ -21,7 +21,7 @@ import logging
 from typing import Sequence
 
 from config.settings import DEEP_ANALYSIS_MODEL, FITNESS_WEIGHT
-from db.operations import update_tier3_scores
+from db.jobs import update_tier3_scores
 from llm.client import complete_json
 
 logger = logging.getLogger(__name__)
