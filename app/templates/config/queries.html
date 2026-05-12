@@ -1,17 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
+<script>
+  function queriesData() {
+    return {
+      queries: {{ queries | tojson }},
+      get json() { return JSON.stringify(this.queries); },
+      addRow() {
+        this.queries.push({ name: '', q: '', location: '', gl: 'us', hl: 'en', lrad: '' });
+      },
+      removeRow(i) {
+        this.queries.splice(i, 1);
+      }
+    };
+  }
+</script>
 <div
   class="max-w-4xl mx-auto py-8 px-4"
-  x-data="{
-    queries: {{ queries | tojson }},
-    get json() { return JSON.stringify(this.queries); },
-    addRow() {
-      this.queries.push({ name: '', q: '', location: '', gl: 'us', hl: 'en', lrad: '' });
-    },
-    removeRow(i) {
-      this.queries.splice(i, 1);
-    }
-  }"
+  x-data="queriesData()"
 >
   <div class="flex items-center justify-between mb-6">
     <div>
