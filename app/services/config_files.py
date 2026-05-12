@@ -11,24 +11,29 @@ import yaml
 from config.settings import QUERIES_PATH, RESUME_PATH
 
 
-def read_queries() -> list[dict]:
-    """Load queries.yaml and return the list of query dicts. Returns [] if file missing."""
+def read_queries() -> tuple[dict, list[dict]]:
+    """
+    Load queries.yaml and return (defaults, queries).
+    Handles both the legacy plain-list format and the current defaults+queries dict format.
+    """
     try:
         with open(QUERIES_PATH, "r", encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except FileNotFoundError:
-        return []
+        return {}, []
     if isinstance(data, list):
-        return data
-    return data.get("queries", []) if isinstance(data, dict) else []
+        return {}, data
+    if isinstance(data, dict):
+        return data.get("defaults", {}), data.get("queries", [])
+    return {}, []
 
 
-def write_queries(queries: list[dict]) -> None:
+def write_queries(defaults: dict, queries: list[dict]) -> None:
     """
-    Serialize queries to YAML, validate by round-tripping, then write atomically.
+    Serialize defaults + queries to YAML, validate by round-tripping, then write atomically.
     """
-    serialized = yaml.dump(queries, allow_unicode=True, sort_keys=False)
-    # Validate by round-tripping
+    data = {"defaults": defaults, "queries": queries}
+    serialized = yaml.dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False)
     yaml.safe_load(serialized)
     _atomic_write(QUERIES_PATH, serialized)
 

@@ -35,19 +35,24 @@ async def config_index(request: Request):
 async def config_queries_get(request: Request):
     from app.main import get_common_context
     ctx = get_common_context(request)
-    ctx["queries"] = read_queries()
+    defaults, queries = read_queries()
+    ctx["defaults"] = defaults
+    ctx["queries"] = queries
     return templates.TemplateResponse(request, "config/queries.html", ctx)
 
 
 @router.post("/config/queries", response_class=HTMLResponse)
 async def config_queries_post(request: Request):
     form = await request.form()
-    raw = form.get("queries_json", "[]")
     try:
-        queries = json.loads(raw)
+        defaults = json.loads(form.get("defaults_json", "{}"))
+    except (ValueError, TypeError):
+        defaults = {}
+    try:
+        queries = json.loads(form.get("queries_json", "[]"))
     except (ValueError, TypeError):
         queries = []
-    write_queries(queries)
+    write_queries(defaults, queries)
     return RedirectResponse(url="/config/queries", status_code=303)
 
 

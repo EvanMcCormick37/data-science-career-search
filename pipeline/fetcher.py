@@ -51,6 +51,8 @@ def load_queries() -> list[dict]:
     """Load and merge query definitions from queries.yaml."""
     with open(QUERIES_PATH) as f:
         data = yaml.safe_load(f)
+    if isinstance(data, list):
+        return data
     defaults = data.get("defaults", {})
     return [{**defaults, **q} for q in data.get("queries", [])]
 
