@@ -1,0 +1,76 @@
+<div id="keywords-table" class="flex flex-col h-full">
+
+  <!-- Row count -->
+  <div class="px-4 py-2 border-b border-gray-200 bg-white flex items-center text-sm text-gray-600 flex-shrink-0">
+    {% if rows %}
+      {{ rows | length }} {{ label | lower }}
+    {% else %}
+      No {{ label | lower }} found
+    {% endif %}
+  </div>
+
+  <!-- Table -->
+  <div class="flex-1 overflow-auto">
+    <table class="w-full text-sm border-collapse">
+      <thead class="bg-gray-100 sticky top-0 z-10">
+        <tr>
+          <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Name</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Count</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Avg Fit</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Avg Qual</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Relevance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+
+          <td class="px-3 py-2 font-medium text-gray-800">{{ row.name }}</td>
+
+          <td class="px-3 py-2 text-right text-gray-600">{{ row.count }}</td>
+
+          <td class="px-3 py-2 text-right">
+            {% if row.avg_fit is not none %}
+              {% if row.avg_fit >= 75 %}
+                <span class="score-badge bg-green-100 text-green-800">{{ row.avg_fit }}</span>
+              {% elif row.avg_fit >= 50 %}
+                <span class="score-badge bg-yellow-100 text-yellow-800">{{ row.avg_fit }}</span>
+              {% else %}
+                <span class="score-badge bg-red-100 text-red-800">{{ row.avg_fit }}</span>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
+          </td>
+
+          <td class="px-3 py-2 text-right">
+            {% if row.avg_qual is not none %}
+              {% if row.avg_qual >= 75 %}
+                <span class="score-badge bg-green-100 text-green-800">{{ row.avg_qual }}</span>
+              {% elif row.avg_qual >= 50 %}
+                <span class="score-badge bg-yellow-100 text-yellow-800">{{ row.avg_qual }}</span>
+              {% else %}
+                <span class="score-badge bg-red-100 text-red-800">{{ row.avg_qual }}</span>
+              {% endif %}
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
+          </td>
+
+          <td class="px-3 py-2 text-right font-semibold text-gray-700">
+            {{ row.relevance if row.relevance is not none else '—' }}
+          </td>
+
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+            No {{ label | lower }} match your filters.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>

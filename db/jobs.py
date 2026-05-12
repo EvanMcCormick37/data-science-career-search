@@ -281,6 +281,31 @@ def get_active_t3_scored_jobs() -> list[dict]:
             return [dict(row) for row in cur.fetchall()]
 
 
+def get_all_t3_scored_jobs() -> list[dict]:
+    """
+    Return all jobs that have a t3_score, regardless of status.
+    Used by the bulk T3 rescoring script to re-evaluate previously analysed jobs.
+    """
+    with connection() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    job_id, title, company_name, location,
+                    attendance, seniority, employment_type,
+                    salary_min, salary_max, salary_currency, salary_period,
+                    description, qualifications, responsibilities,
+                    date_listed, url,
+                    t2_score, t2_explanation,
+                    status
+                FROM jobs
+                WHERE t3_score IS NOT NULL
+                ORDER BY t2_score DESC NULLS LAST
+                """
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+
 def get_jobs_for_reprocessing() -> list[dict]:
     """Return all jobs with status='extraction_failed' that have stored serp_api_json."""
     with connection() as conn:

@@ -50,12 +50,13 @@ def get_common_context(request: Request) -> dict:
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
-from app.routes import jobs, applications, actions, config_editor  # noqa: E402
+from app.routes import jobs, applications, actions, config_editor, skills  # noqa: E402
 
 app.include_router(jobs.router)
 app.include_router(applications.router)
 app.include_router(actions.router)
 app.include_router(config_editor.router)
+app.include_router(skills.router)
 
 
 @app.get("/", include_in_schema=False)

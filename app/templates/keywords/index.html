@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex h-[calc(100vh-3.5rem)]">
+
+  <!-- ── Filter Sidebar ────────────────────────────────────── -->
+  <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4 flex flex-col gap-4">
+    <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Filters</h2>
+
+    <form method="GET" action="{{ action }}" class="flex flex-col gap-4">
+
+      <!-- Sort -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Sort by</label>
+        <select name="sort" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
+          <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Relevance</option>
+          <option value="count"     {% if sort == 'count'     %}selected{% endif %}>Count</option>
+          <option value="avg_fit"   {% if sort == 'avg_fit'   %}selected{% endif %}>Avg Fit</option>
+          <option value="avg_qual"  {% if sort == 'avg_qual'  %}selected{% endif %}>Avg Qual</option>
+        </select>
+      </div>
+
+      <!-- Name search -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Name</label>
+        <input type="text" name="name" value="{{ name }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1"
+               placeholder="Search {{ label | lower }}…" />
+      </div>
+
+      <!-- Show unverified candidates -->
+      <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+        <input type="checkbox" name="show_candidates" value="true"
+               {% if show_candidates %}checked{% endif %} />
+        Show unverified
+      </label>
+
+      <button type="submit"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-md transition-colors">
+        Apply
+      </button>
+    </form>
+  </aside>
+
+  <!-- ── Table ──────────────────────────────────────────────── -->
+  <main class="flex-1 overflow-auto min-w-0">
+    {% include "keywords/_table.html" %}
+  </main>
+
+</div>
+{% endblock %}
