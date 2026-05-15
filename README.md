@@ -4,9 +4,10 @@ A self-hosted job search system that ingests listings from SerpAPI, scores them 
 
 ## What it does
 
-1. **Ingest** — fetches Google Jobs results via SerpAPI, deduplicates, and extracts structured metadata with a cheap LLM.
-2. **Score** — every job is automatically scored 0–100 for career fit at ingestion time. High scorers get deep analysis from an expensive LLM.
-3. **Browse** — a FastAPI dashboard lets you filter jobs, track applications, and edit config.
+1. Ingest — The ingest function uses a series of search queries to extract listings from the Google Jobs API. Two ingestion scripts cover different sets of data: backfill.py scrapes all job results from the past two weeks, for a maximum of 10 pages per search query, while daily_run.py scrapes only results he past 24 hours. These job results get returned in the form of JSON metadata objects.
+2. Extract — An LLM-powered extractor extracts key metadata about the job, such as salary, seniority level, and attendance policy (onsite, hybrid, remote), as well as any skills and frameworks that are listed as job requirements.
+3. Score — Each job is automatically scored by an inexpensive LLM for ‘career fit’ with the career profile stored in data/career_profile.md, on a scale of 0-100. Jobs with a career fit above some threshold (default 70) are rescored by an expensive model using a two-fold prompt. Both models return arguments supporting their ‘fit scores’ which are stored alongside the scores in the jobs database.
+4. Browse — a FastAPI dashboard lets you filter jobs, track applications, monitor the relevance of particular skills and frameworks, and edit your configuration (career profile, search queries).
 
 ## Architecture
 
