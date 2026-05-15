@@ -25,7 +25,7 @@ def list_skills(
     order = _ORDER_MAP.get(sort, _ORDER_MAP["relevance"])
     conditions = ["j.t3_score IS NOT NULL"]
     if not show_candidates:
-        conditions.append("s.is_candidate = FALSE")
+        conditions.append("s.is_candidate = 0")
     if name:
         conditions.append("s.name ILIKE %(name_pattern)s")
 
@@ -65,7 +65,7 @@ def list_frameworks(
     order = _ORDER_MAP.get(sort, _ORDER_MAP["relevance"])
     conditions = ["j.t3_score IS NOT NULL"]
     if not show_candidates:
-        conditions.append("f.is_candidate = FALSE")
+        conditions.append("f.is_candidate = 0")
     if name:
         conditions.append("f.name ILIKE %(name_pattern)s")
 

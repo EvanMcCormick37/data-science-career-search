@@ -41,7 +41,7 @@ async def skills_index(
         "label": "Skills",
     }
     template = "keywords/_table.html" if request.headers.get("hx-request") else "keywords/index.html"
-    return templates.TemplateResponse(template, ctx)
+    return templates.TemplateResponse(request, template, ctx)
 
 
 @router.get("/frameworks", response_class=HTMLResponse)
@@ -69,4 +69,4 @@ async def frameworks_index(
         "label": "Frameworks",
     }
     template = "keywords/_table.html" if request.headers.get("hx-request") else "keywords/index.html"
-    return templates.TemplateResponse(template, ctx)
+    return templates.TemplateResponse(request, template, ctx)
