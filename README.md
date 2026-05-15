@@ -4,10 +4,11 @@ A self-hosted job search system that ingests listings from SerpAPI, scores them 
 
 ## What it does
 
-1. Ingest — The ingest function uses a series of search queries to extract listings from the Google Jobs API. Two ingestion scripts cover different sets of data: backfill.py scrapes all job results from the past two weeks, for a maximum of 10 pages per search query, while daily_run.py scrapes only results he past 24 hours. These job results get returned in the form of JSON metadata objects.
-2. Extract — An LLM-powered extractor extracts key metadata about the job, such as salary, seniority level, and attendance policy (onsite, hybrid, remote), as well as any skills and frameworks that are listed as job requirements.
-3. Score — Each job is automatically scored by an inexpensive LLM for ‘career fit’ with the career profile stored in data/career_profile.md, on a scale of 0-100. Jobs with a career fit above some threshold (default 70) are rescored by an expensive model using a two-fold prompt. Both models return arguments supporting their ‘fit scores’ which are stored alongside the scores in the jobs database.
-4. Browse — a FastAPI dashboard lets you filter jobs, track applications, monitor the relevance of particular skills and frameworks, and edit your configuration (career profile, search queries).
+1. **Ingest** — Use custom search queries to extract listings from the Google Jobs API. These job results get returned in the form of JSON metadata objects.
+2. **Extract** — An LLM extracts key metadata such as salary, seniority level, and attendance policy (onsite, hybrid, remote), as well as skills/tools that are required for the position.
+3. **Score** — Each job is automatically scored by an inexpensive LLM for ‘career fit’ with the user's `career_profile.md`, on a scale of 0-100. Jobs with career fit above a threshold (default 70) are rescored by an expensive model along two metrics: `qualification` and `preference`. Both models return grounded arguments supporting their scores.
+4. **Catalogue** — Jobs are catalogued in a containerized PostgreSQL database, along with all metadata and LLM scoring data. Each job also stores a vector embedding of the job description.
+5. **Browse** — a FastAPI dashboard lets you filter jobs, track applications, monitor the relevance of particular skills and frameworks, and edit your profile configuration (career profile, search queries).
 
 ## Architecture
 
@@ -25,7 +26,7 @@ Both the pipeline and dashboard share a single database and a focused SQL layer 
 
 | Tier | Model | When | Output |
 |------|-------|------|--------|
-| Tier 1 | pgvector | Ad-hoc | Cosine similarity against career profile embedding |
+| Tier 1 | pgvector | Ad-hoc | Cosine similarity against career profile embedding | **DEPRECATED**
 | Tier 2 | Cheap LLM (Gemini Flash) | Every ingestion | `t2_score` 0–100 + explanation |
 | Tier 3 | Expensive LLM (Claude Sonnet) | Auto for `t2_score >= 70`; on-demand | `t3_qualification`, `t3_fit`, combined score |
 
@@ -77,7 +78,6 @@ uvicorn app.main:app --reload  # → http://127.0.0.1:8000
 | Re-extract from stored JSON | `python scripts/reprocess.py` |
 | Deep-score top jobs | `python scripts/score_top_jobs.py` |
 | Ad-hoc 3-tier match | `python scripts/match_career_profile.py` |
-| Curate taxonomy candidates | `python scripts/review_candidates.py` |
 
 ## Stack
 
