@@ -10,7 +10,8 @@
   <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto p-4 flex flex-col gap-4">
     <h2 class="font-semibold text-gray-700 text-sm uppercase tracking-wide">Filters</h2>
 
-    <form id="filter-form" method="GET" action="/jobs" class="flex flex-col gap-4">
+    <form id="filter-form" method="GET" action="/jobs" class="flex flex-col gap-4"
+          hx-get="/jobs" hx-target="#jobs-table" hx-swap="outerHTML" hx-push-url="true">
 
       <!-- Sort -->
       <div>

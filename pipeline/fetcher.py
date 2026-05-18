@@ -67,19 +67,25 @@ def _make_params(query: dict) -> dict:
 # Lowercase substrings — any `via` field containing one of these is dropped.
 _BLOCKED_SOURCES: frozenset[str] = frozenset({
     "ai salary map",
+    "mercor",
+    "upwork",
+    "synergisticit",
+    "diversityjobs",
+    "bebee",
+    "jobs via dice"
 })
-
 
 def _is_valid_job(job: dict) -> bool:
     """Return False for known non-job or spam sources."""
     
-    via = job.get("via", "").lower()
-    if any(blocked in via for blocked in _BLOCKED_SOURCES):
+    job_sources = [job.get("via", "").lower(), job.get("company_name","").lower(), job.get("title","").lower()]
+    if any(blocked in job_sources for blocked in _BLOCKED_SOURCES):
         return False
     
     desc = job.get("description","")
     if len(desc) < 1000:
         return False
+    
     
     return True
 

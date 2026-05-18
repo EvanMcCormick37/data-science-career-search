@@ -225,6 +225,12 @@
     "&attendance=" ~ a %}{% endfor %} {% if page > 1 %}
     <a
       href="{{ pg }}&page={{ page - 1 }}"
+      hx-get="/jobs"
+      hx-include="#filter-form"
+      hx-vals='{"page": "{{ page - 1 }}"}'
+      hx-target="#jobs-table"
+      hx-swap="outerHTML"
+      hx-push-url="true"
       class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors"
     >
       &larr; Prev
@@ -241,6 +247,12 @@
     {% if page < total_pages %}
     <a
       href="{{ pg }}&page={{ page + 1 }}"
+      hx-get="/jobs"
+      hx-include="#filter-form"
+      hx-vals='{"page": "{{ page + 1 }}"}'
+      hx-target="#jobs-table"
+      hx-swap="outerHTML"
+      hx-push-url="true"
       class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors"
     >
       Next &rarr;

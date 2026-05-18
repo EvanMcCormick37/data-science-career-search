@@ -95,6 +95,12 @@
     {% set total_pages = ((total - 1) // page_size) + 1 %}
     {% if page > 1 %}
     <a href="?page={{ page - 1 }}&sort={{ sort }}&company={{ company }}&date_from={{ date_from }}&date_to={{ date_to }}&has_offer={{ has_offer }}{% for s in states %}&states={{ s }}{% endfor %}{% for al in assistance_level %}&assistance_level={{ al }}{% endfor %}"
+       hx-get="/applications"
+       hx-include="#filter-form"
+       hx-vals='{"page": "{{ page - 1 }}"}'
+       hx-target="#applications-table"
+       hx-swap="outerHTML"
+       hx-push-url="true"
        class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors">
       &larr; Prev
     </a>
@@ -106,6 +112,12 @@
 
     {% if page < total_pages %}
     <a href="?page={{ page + 1 }}&sort={{ sort }}&company={{ company }}&date_from={{ date_from }}&date_to={{ date_to }}&has_offer={{ has_offer }}{% for s in states %}&states={{ s }}{% endfor %}{% for al in assistance_level %}&assistance_level={{ al }}{% endfor %}"
+       hx-get="/applications"
+       hx-include="#filter-form"
+       hx-vals='{"page": "{{ page + 1 }}"}'
+       hx-target="#applications-table"
+       hx-swap="outerHTML"
+       hx-push-url="true"
        class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-200 rounded hover:bg-blue-50 transition-colors">
       Next &rarr;
     </a>

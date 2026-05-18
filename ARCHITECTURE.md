@@ -35,6 +35,8 @@ Both systems share one database and a focused SQL layer (`db/jobs.py`, `db/taxon
 │                                                      │
 │  /jobs          — filterable job browser             │
 │  /applications  — application tracker                │
+│  /skills        — skill aggregation table            │
+│  /frameworks    — framework aggregation table        │
 │  /config        — edit queries.yaml + career profile │
 └──────────────────────────────────────────────────────┘
 ```
@@ -86,10 +88,11 @@ data-science-career-search/
 │   ├── schema.sql               # Full DDL (idempotent; run via seed.py)
 │   ├── connection.py            # Threaded psycopg2 connection pool
 │   ├── jobs.py                  # SQL for jobs table: insert, score updates, expiry, reprocess, fetch
+│   ├── skills.py                # Read-only aggregation queries for /skills and /frameworks tabs
 │   ├── taxonomy.py              # SQL for skills/frameworks: candidates, promotion, merge, discard
 │   ├── applications.py          # SQL for applications: create, update, listing, stats
 │   ├── operations.py            # Re-export shim — import from the modules above instead
-│   ├── migrations/              # Incremental schema changes (001–004)
+│   ├── migrations/              # Incremental schema changes (001–005)
 │   └── seed/
 │       ├── seed.py              # Bootstrap: runs schema.sql + seeds taxonomy CSVs
 │       ├── skills.csv           # Canonical skills taxonomy
@@ -103,15 +106,17 @@ data-science-career-search/
 │   │   ├── jobs.py              # GET /jobs, GET /jobs/{id}/detail, PATCH /jobs/{id}/status
 │   │   ├── applications.py      # Applications browser + detail + edit
 │   │   ├── actions.py           # Cross-cutting writes (log application)
+│   │   ├── skills.py            # GET /skills, GET /frameworks
 │   │   └── config_editor.py     # queries.yaml + career_profile.md editors
 │   ├── services/
 │   │   ├── jobs.py              # Filter/sort/paginate composition
 │   │   ├── applications.py      # Log/edit application logic, resume resolution
-│   │   └── config_files.py      # YAML/Markdown read/validate/write
+│   │   └── config_files.py      # YAML/Markdown read/validate/write (preserves queries.yaml defaults)
 │   ├── templates/               # Jinja2 templates (full pages + HTMX partials)
 │   │   ├── base.html
 │   │   ├── jobs/                # index.html, _table.html, _row.html, _detail.html
 │   │   ├── applications/        # index.html, _table.html, _row.html, _detail.html, _new_form.html
+│   │   ├── keywords/            # index.html, _table.html  (shared by /skills and /frameworks)
 │   │   └── config/              # index.html, queries.html, career_profile.html
 │   └── static/
 │       ├── app.css
@@ -123,6 +128,7 @@ data-science-career-search/
 │   ├── reprocess.py             # Re-run extraction on stored serp_api_json
 │   ├── score_top_jobs.py        # Tier3 deep analysis on top-K by tier2_score
 │   ├── match_career_profile.py  # Ad-hoc 3-tier matching (vector → cheap LLM → expensive LLM)
+│   ├── rescore_tier3.py         # Bulk re-run T3 scoring on all previously scored jobs (any status)
 │   ├── review_candidates.py     # Interactive taxonomy curation for LLM-proposed candidates
 │   ├── test_pipeline.py         # Pipeline smoke test
 │   ├── backup_db.sh             # Database backup
@@ -265,7 +271,7 @@ where `β = FITNESS_WEIGHT` (default 0.2). A qualification of 0 collapses the ma
 - **Primary path:** `scripts/score_top_jobs.py` — query top-K jobs by `t2_score DESC`, run expensive LLM, persist `t3_score` / `t3_explanation` / `t3_qualification` / `t3_fit`.
 - **Ad-hoc path:** `scripts/match_career_profile.py` — embed career profile, vector search top 100, optionally re-score (tier 2), optionally deep-analyse (tier 3).
 - **Auto path:** The orchestrator queues any newly ingested job with `t2_score >= TIER3_AUTO_SCORE_MIN` (default 70) for immediate tier 3 analysis within the same batch run.
-- **Migration path:** `scripts/rescore_active_tier3.py` — re-score active jobs that already have a `t3_score` using the split qualification/fit prompt.
+- **Bulk rescore path:** `scripts/rescore_tier3.py` — re-score all jobs that already have a `t3_score`, regardless of status (active, expired, bad_fit, applied, etc.). Use after changes to the T3 prompt or scoring formula. Accepts `--status` to limit scope, `--no-persist` for a dry run, `--yes` to skip confirmation.
 
 ---
 
@@ -295,7 +301,9 @@ The dashboard must be deletable without touching the `db/` SQL modules. If `app/
 | `GET /applications`          | Filterable application tracker                               |
 | `GET /applications/{id}/detail` | Editable application detail panel                         |
 | `POST /applications`         | Log new application (atomic: insert + update job back-pointer)|
-| `GET /config/queries`        | Edit `queries.yaml` via table form                          |
+| `GET /skills`                | Skill aggregation table: count, avg fit, avg qual, relevance |
+| `GET /frameworks`            | Framework aggregation table: same metrics as skills          |
+| `GET /config/queries`        | Edit `queries.yaml` via table form (defaults + queries)      |
 | `GET /config/profile`        | Edit `career_profile.md` via textarea                        |
 
 HTMX filter changes swap only the table fragment (`hx-target`, `hx-push-url="true"`). Row clicks load the detail panel without a full page reload. All writes use `PATCH`/`POST` with form data; no JSON API.
@@ -308,11 +316,18 @@ The nav bar shows pipeline freshness (last ingestion time, active job count, app
 
 ## Candidate Taxonomy Review
 
-`scripts/review_candidates.py` handles curation of LLM-proposed skills/frameworks (`is_candidate = 1`).
+When the LLM extraction step encounters a skill or framework name it cannot resolve to an existing canonical entry or alias, it inserts the name as a new row with `is_candidate = 1`. These entries are excluded from dashboard analytics by default until reviewed.
 
-**Per-candidate actions:** promote (assign to taxonomy hierarchy), merge (remap to an existing canonical entry + add alias), discard, skip, quit.
+**Two review surfaces:**
+
+- **Dashboard** (`/skills`, `/frameworks`) — the "Show unverified" toggle reveals candidate entries inline alongside validated ones. Useful for spotting high-signal candidates (those with strong `avg_fit` or high `count`) before the CLI review cycle.
+- **CLI** (`scripts/review_candidates.py`) — interactive curation loop. A candidate only enters this loop once it has accumulated at least `CANDIDATE_MIN_JOBS` (default: 3) job references, filtered by `db/taxonomy.py:get_candidate_skills_above_threshold()`.
+
+**Per-candidate actions (CLI):** promote (assign to taxonomy hierarchy), merge (remap to an existing canonical entry + add alias), discard, skip, quit.
 
 **Similarity detection:** Before the review loop, all canonical entries are embedded with the small model (`all-MiniLM-L6-v2`). For each candidate, the top-K most similar canonical entries are shown to guide the decision.
+
+**Threshold setting:** `CANDIDATE_MIN_JOBS` (default: 3) controls both the CLI review eligibility threshold and the minimum count filter on the `/skills` and `/frameworks` dashboard tables.
 
 ---
 
@@ -340,6 +355,7 @@ The nav bar shows pipeline freshness (last ingestion time, active job count, app
 | `BACKFILL_MAX_PAGES`   | `10`                          | SerpAPI pages per query in backfill mode      |
 | `JOB_EXPIRY_DAYS`      | `30`                          | Days before active listings are marked expired|
 | `DEDUP_FUZZY_THRESHOLD`| `85`                          | thefuzz ratio threshold for fuzzy dedup       |
+| `CANDIDATE_MIN_JOBS`   | `3`                           | Min job references before a candidate enters CLI review; also the min count filter on /skills and /frameworks |
 | `ANTHROPIC_API_KEY`    | *(optional)*                  | Direct Anthropic key (bypasses OpenRouter)    |
 
 ---

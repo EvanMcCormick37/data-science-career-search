@@ -11,6 +11,10 @@
       method="GET"
       action="/applications"
       class="flex flex-col gap-4"
+      hx-get="/applications"
+      hx-target="#applications-table"
+      hx-swap="outerHTML"
+      hx-push-url="true"
     >
       <!-- Sort -->
       <div>

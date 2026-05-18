@@ -56,7 +56,7 @@ EMBEDDING_MAX_TOKENS: int = int(os.getenv("EMBEDDING_MAX_TOKENS", "384"))
 
 # ── Pipeline tuning ───────────────────────────────────────────────────────
 DEDUP_FUZZY_THRESHOLD: int = int(os.getenv("DEDUP_FUZZY_THRESHOLD", "85"))
-FITNESS_WEIGHT:        float = float(os.getenv("FITNESS_WEIGHT",        "0.2"))
+FITNESS_WEIGHT:        float = float(os.getenv("FITNESS_WEIGHT",        "1"))
 TIER1_CANDIDATES:      int = int(os.getenv("TIER1_CANDIDATES",      "100"))
 TIER2_TOP_N:           int = int(os.getenv("TIER2_TOP_N",           "15"))
 TIER2_CONCURRENCY:     int = int(os.getenv("TIER2_CONCURRENCY",     "10"))
