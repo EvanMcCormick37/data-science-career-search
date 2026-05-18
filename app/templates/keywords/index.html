@@ -12,11 +12,30 @@
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Sort by</label>
         <select name="sort" class="w-full text-sm border border-gray-300 rounded px-2 py-1">
-          <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>Relevance</option>
-          <option value="count"     {% if sort == 'count'     %}selected{% endif %}>Count</option>
-          <option value="avg_fit"   {% if sort == 'avg_fit'   %}selected{% endif %}>Avg Fit</option>
-          <option value="avg_qual"  {% if sort == 'avg_qual'  %}selected{% endif %}>Avg Qual</option>
+          <option value="improvement_priority" {% if sort == 'improvement_priority' %}selected{% endif %}>Improvement Priority</option>
+          <option value="avg_salary"           {% if sort == 'avg_salary'           %}selected{% endif %}>Avg Salary</option>
+          <option value="avg_fit"              {% if sort == 'avg_fit'              %}selected{% endif %}>Avg Fit</option>
+          <option value="avg_qual"             {% if sort == 'avg_qual'             %}selected{% endif %}>Avg Qual</option>
+          <option value="raw_count"            {% if sort == 'raw_count'            %}selected{% endif %}>Count</option>
+          <option value="actionable_count"     {% if sort == 'actionable_count'     %}selected{% endif %}>Actionable Count</option>
         </select>
+      </div>
+
+      <!-- Listing mode -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Listings</label>
+        <div class="flex flex-col gap-1">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="radio" name="listing_mode" value="active"
+                   {% if listing_mode == 'active' %}checked{% endif %} />
+            Active Only
+          </label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="radio" name="listing_mode" value="good"
+                   {% if listing_mode == 'good' %}checked{% endif %} />
+            All Good
+          </label>
+        </div>
       </div>
 
       <!-- Name search -->
@@ -25,6 +44,18 @@
         <input type="text" name="name" value="{{ name }}"
                class="w-full text-sm border border-gray-300 rounded px-2 py-1"
                placeholder="Search {{ label | lower }}…" />
+      </div>
+
+      <!-- Date listed range -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Listed from</label>
+        <input type="date" name="date_listed_from" value="{{ date_listed_from }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Listed to</label>
+        <input type="date" name="date_listed_to" value="{{ date_listed_to }}"
+               class="w-full text-sm border border-gray-300 rounded px-2 py-1" />
       </div>
 
       <!-- Show unverified candidates -->

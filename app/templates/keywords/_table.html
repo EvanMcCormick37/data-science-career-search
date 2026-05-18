@@ -15,10 +15,16 @@
       <thead class="bg-gray-100 sticky top-0 z-10">
         <tr>
           <th class="text-left px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Name</th>
-          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Count</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Avg Salary</th>
           <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Avg Fit</th>
           <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Avg Qual</th>
-          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Relevance</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Count</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600 whitespace-nowrap">Actionable</th>
+          <th class="text-center px-3 py-2 font-medium text-gray-600 whitespace-nowrap">My Skill Level</th>
+          <th class="text-right px-3 py-2 font-medium text-gray-600">
+            Improvement Priority
+            <span class="block text-xs font-normal text-gray-400">ln(Avg Salary&times;Avg Fit&times;Actionable&times;My Skill Level) - 15</span>
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -27,8 +33,16 @@
 
           <td class="px-3 py-2 font-medium text-gray-800">{{ row.name }}</td>
 
-          <td class="px-3 py-2 text-right text-gray-600">{{ row.count }}</td>
+          <!-- Avg Salary -->
+          <td class="px-3 py-2 text-right text-gray-700 whitespace-nowrap">
+            {% if row.avg_salary is not none %}
+              ${{ (row.avg_salary | int // 1000) }}k
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
+          </td>
 
+          <!-- Avg Fit -->
           <td class="px-3 py-2 text-right">
             {% if row.avg_fit is not none %}
               {% if row.avg_fit >= 75 %}
@@ -43,6 +57,7 @@
             {% endif %}
           </td>
 
+          <!-- Avg Qual -->
           <td class="px-3 py-2 text-right">
             {% if row.avg_qual is not none %}
               {% if row.avg_qual >= 75 %}
@@ -57,14 +72,49 @@
             {% endif %}
           </td>
 
-          <td class="px-3 py-2 text-right font-semibold text-gray-700">
-            {{ row.relevance if row.relevance is not none else '—' }}
+          <!-- Raw Count -->
+          <td class="px-3 py-2 text-right text-gray-600">{{ row.raw_count }}</td>
+
+          <!-- Actionable Count -->
+          <td class="px-3 py-2 text-right">
+            {% if row.actionable_count > 0 %}
+              <span class="font-medium text-blue-700">{{ row.actionable_count }}</span>
+            {% else %}
+              <span class="text-gray-400">0</span>
+            {% endif %}
+          </td>
+
+          <!-- My Skill Level (inline editable select) -->
+          <td class="px-3 py-2 text-center">
+            <select
+              name="skill_level"
+              hx-patch="{{ action }}/{{ row.id }}/level"
+              hx-trigger="change"
+              hx-swap="none"
+              class="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-700 cursor-pointer"
+            >
+              <option value=""             {% if row.user_skill_level is none        %}selected{% endif %}>—</option>
+              <option value="Unskilled"    {% if row.user_skill_level == 'Unskilled'    %}selected{% endif %}>Unskilled</option>
+              <option value="Novice"       {% if row.user_skill_level == 'Novice'       %}selected{% endif %}>Novice</option>
+              <option value="Intermediate" {% if row.user_skill_level == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+              <option value="Advanced"     {% if row.user_skill_level == 'Advanced'     %}selected{% endif %}>Advanced</option>
+              <option value="Expert"       {% if row.user_skill_level == 'Expert'       %}selected{% endif %}>Expert</option>
+            </select>
+          </td>
+
+          <!-- Improvement Priority -->
+          <td class="px-3 py-2 text-right font-semibold">
+            {% if row.improvement_priority is not none %}
+              <span class="text-gray-800">{{ row.improvement_priority }}</span>
+            {% else %}
+              <span class="text-gray-400">—</span>
+            {% endif %}
           </td>
 
         </tr>
         {% else %}
         <tr>
-          <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+          <td colspan="8" class="px-4 py-8 text-center text-gray-400">
             No {{ label | lower }} match your filters.
           </td>
         </tr>
